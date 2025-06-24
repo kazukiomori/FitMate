@@ -8,14 +8,16 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var user = User()
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        if user.isOnboardingComplete {
+            MainTabView()
+                .environmentObject(user)
+        } else {
+            OnboardingView()
+                .environmentObject(user)
         }
-        .padding()
     }
 }
 
