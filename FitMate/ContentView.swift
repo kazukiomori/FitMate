@@ -2,8 +2,6 @@
 //  ContentView.swift
 //  FitMate
 //
-//  Created by Kazuki Omori on 2025/06/22.
-//
 
 import SwiftUI
 

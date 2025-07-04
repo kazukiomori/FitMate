@@ -22,12 +22,6 @@ struct MainTabView: View {
                     Text("食事")
                 }
             
-            ExerciseView()
-                .tabItem {
-                    Image(systemName: "figure.walk")
-                    Text("運動")
-                }
-            
             ProgressChartView()
                 .tabItem {
                     Image(systemName: "chart.bar.fill")

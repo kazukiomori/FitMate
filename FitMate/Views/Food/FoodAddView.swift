@@ -5,18 +5,23 @@
 
 import SwiftUI
 
+import SwiftUI
+
 struct FoodAddView: View {
-    @Binding var foodEntries: [FoodEntry]
+    @ObservedObject var recordViewModel: RecordViewModel
     let selectedMeal: MealType
     @State private var foodName = ""
     @State private var calories = ""
+    @State private var selectedDate = Date()
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
                 // カメラボタン
-                Button(action: {}) {
+                Button(action: {
+                    // TODO: カメラ機能実装
+                }) {
                     VStack {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 50))
@@ -44,6 +49,11 @@ struct FoodAddView: View {
                     TextField("例: 150", text: $calories)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .keyboardType(.numberPad)
+                    
+                    Text("日時")
+                        .font(.headline)
+                    DatePicker("", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+                        .datePickerStyle(CompactDatePickerStyle())
                 }
                 
                 Spacer()
@@ -53,17 +63,18 @@ struct FoodAddView: View {
                         let newEntry = FoodEntry(
                             name: foodName,
                             calories: cal,
-                            time: Date(),
+                            time: selectedDate,
                             mealType: selectedMeal
                         )
-                        foodEntries.append(newEntry)
+                        recordViewModel.addFoodEntry(newEntry)
                         presentationMode.wrappedValue.dismiss()
                     }
                 }
+                .disabled(foodName.isEmpty || Int(calories) == nil)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.blue)
+                .background(foodName.isEmpty || Int(calories) == nil ? Color.gray : Color.blue)
                 .cornerRadius(10)
             }
             .padding()

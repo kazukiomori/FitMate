@@ -13,6 +13,7 @@ class User: ObservableObject {
     @Published var height: Double = 170.0
     @Published var gender: Gender = .female
     @Published var activityLevel: ActivityLevel = .moderate
+    @Published var targetDate: Date = Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
     @Published var isOnboardingComplete: Bool = false
     
     func calculateDailyCalories() -> Int {
@@ -33,5 +34,17 @@ class User: ObservableObject {
         
         // ダイエット用に500kcal減らす
         return Int(bmr * activityMultiplier - 500)
+    }
+    
+    func calculateWeeklyWeightLoss() -> Double {
+        let weightDifference = currentWeight - targetWeight
+        let daysDifference = Calendar.current.dateComponents([.day], from: Date(), to: targetDate).day ?? 84
+        let weeksDifference = max(Double(daysDifference) / 7.0, 1.0) // 最低1週間
+        
+        return min(weightDifference / weeksDifference, 1.0) // 最大週1kg制限
+    }
+    
+    func isGoalRealistic() -> Bool {
+        return calculateWeeklyWeightLoss() <= 1.0
     }
 }
