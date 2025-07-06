@@ -8,14 +8,14 @@ import SwiftUI
 struct OnboardingView: View {
     @EnvironmentObject var user: User
     @State private var currentStep = 0
-    private let totalSteps = 4
+    private let totalSteps = 5 // トレーナー設定を追加
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
                 // Progress Bar
                 ProgressView(value: Double(currentStep) / Double(totalSteps))
-                    .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                    .accentColor(.blue)
                     .padding()
                 
                 // Content
@@ -26,8 +26,10 @@ struct OnboardingView: View {
                         .tag(1)
                     GoalSettingView()
                         .tag(2)
-                    FeatureIntroView()
+                    TrainerSetupView()
                         .tag(3)
+                    FeatureIntroView()
+                        .tag(4)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 

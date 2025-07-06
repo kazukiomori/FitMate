@@ -16,6 +16,10 @@ class User: ObservableObject {
     @Published var targetDate: Date = Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
     @Published var isOnboardingComplete: Bool = false
     
+    // パーソナルトレーナー関連
+    @Published var personalTrainer: PersonalTrainer?
+    @Published var hasCompletedTrainerSetup: Bool = false
+    
     func calculateDailyCalories() -> Int {
         // 簡易的なBMR計算（Harris-Benedict式）
         let bmr: Double
@@ -46,5 +50,10 @@ class User: ObservableObject {
     
     func isGoalRealistic() -> Bool {
         return calculateWeeklyWeightLoss() <= 1.0
+    }
+    
+    func setPersonalTrainer(_ trainer: PersonalTrainer) {
+        personalTrainer = trainer
+        hasCompletedTrainerSetup = true
     }
 }
