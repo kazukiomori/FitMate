@@ -14,7 +14,7 @@ struct WelcomeStepView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.pink)
             
-            Text("HealthyLife")
+            Text("FitMate")
                 .font(.largeTitle)
                 .fontWeight(.bold)
             

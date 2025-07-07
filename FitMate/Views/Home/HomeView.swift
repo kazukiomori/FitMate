@@ -99,7 +99,7 @@ struct HomeView: View {
                 }
                 .padding()
             }
-            .navigationTitle("HealthyLife")
+            .navigationTitle("FitMate")
             .background(Color.gray.opacity(0.1))
             .refreshable {
                 healthKitManager.refreshHealthData()
