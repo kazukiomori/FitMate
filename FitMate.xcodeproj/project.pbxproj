@@ -6,7 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3B373D712E24004900A74D31 /* FitMateDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 3B373D6F2E24004900A74D31 /* FitMateDataModel.xcdatamodeld */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		3B373D702E24004900A74D31 /* FitMateDataModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = FitMateDataModel.xcdatamodel; sourceTree = "<group>"; };
 		3BECF18B2E081DB200EAE549 /* FitMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -32,6 +37,7 @@
 		3BECF1822E081DB200EAE549 = {
 			isa = PBXGroup;
 			children = (
+				3B373D6F2E24004900A74D31 /* FitMateDataModel.xcdatamodeld */,
 				3BECF18D2E081DB200EAE549 /* FitMate */,
 				3BECF18C2E081DB200EAE549 /* Products */,
 			);
@@ -119,6 +125,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3B373D712E24004900A74D31 /* FitMateDataModel.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,6 +335,19 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		3B373D6F2E24004900A74D31 /* FitMateDataModel.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				3B373D702E24004900A74D31 /* FitMateDataModel.xcdatamodel */,
+			);
+			currentVersion = 3B373D702E24004900A74D31 /* FitMateDataModel.xcdatamodel */;
+			path = FitMateDataModel.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = 3BECF1832E081DB200EAE549 /* Project object */;
 }
