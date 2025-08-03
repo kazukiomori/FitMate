@@ -3,22 +3,41 @@
 //  FitMate
 //
 
+// MARK: - Views/Onboarding/OnboardingView.swift (モダンUI版)
 import SwiftUI
 
 struct OnboardingView: View {
     @EnvironmentObject var user: User
     @State private var currentStep = 0
-    private let totalSteps = 5 // トレーナー設定を追加
+    @State private var offset: CGFloat = 0
+    private let totalSteps = 4
     
     var body: some View {
-        NavigationView {
+        ZStack {
+            // 動的グラデーション背景
+            AnimatedGradientBackground(currentStep: currentStep)
+                .ignoresSafeArea()
+            
             VStack(spacing: 0) {
-                // Progress Bar
-                ProgressView(value: Double(currentStep) / Double(totalSteps))
-                    .accentColor(.blue)
-                    .padding()
+                // プログレスバー
+                VStack(spacing: 15) {
+                    HStack {
+                        ForEach(0..<totalSteps, id: \.self) { index in
+                            Capsule()
+                                .fill(index <= currentStep ? Color.white : Color.white.opacity(0.3))
+                                .frame(height: 6)
+                                .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentStep)
+                        }
+                    }
+                    .padding(.horizontal, 40)
+                    
+                    Text("\(currentStep + 1) / \(totalSteps)")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .padding(.top, 20)
                 
-                // Content
+                // コンテンツ
                 TabView(selection: $currentStep) {
                     WelcomeStepView()
                         .tag(0)
@@ -26,43 +45,127 @@ struct OnboardingView: View {
                         .tag(1)
                     GoalSettingView()
                         .tag(2)
-                    TrainerSetupView()
-                        .tag(3)
                     FeatureIntroView()
-                        .tag(4)
+                        .tag(3)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.5), value: currentStep)
                 
-                // Navigation Buttons
-                HStack {
+                // ナビゲーションボタン
+                HStack(spacing: 20) {
                     if currentStep > 0 {
                         Button("戻る") {
-                            withAnimation {
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                                 currentStep -= 1
                             }
                         }
-                        .foregroundColor(.gray)
+                        .buttonStyle(SecondaryGlassButtonStyle())
+                    } else {
+                        Spacer()
                     }
                     
-                    Spacer()
-                    
-                    Button(currentStep == totalSteps - 1 ? "開始する" : "次へ") {
+                    Button(currentStep == totalSteps - 1 ? "始める" : "次へ") {
                         if currentStep == totalSteps - 1 {
-                            user.isOnboardingComplete = true
+                            withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
+                                user.isOnboardingComplete = true
+                            }
                         } else {
-                            withAnimation {
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                                 currentStep += 1
                             }
                         }
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 12)
-                    .background(Color.blue)
-                    .cornerRadius(25)
+                    .buttonStyle(PrimaryGlassButtonStyle())
                 }
-                .padding()
+                .padding(.horizontal, 30)
+                .padding(.bottom, 40)
             }
         }
+    }
+}
+
+// MARK: - アニメーション背景
+struct AnimatedGradientBackground: View {
+    let currentStep: Int
+    @State private var animateGradient = false
+    
+    private var gradientColors: [Color] {
+        switch currentStep {
+        case 0: return [Color.purple, Color.pink, Color.orange]
+        case 1: return [Color.blue, Color.cyan, Color.mint]
+        case 2: return [Color.green, Color.teal, Color.blue]
+        case 3: return [Color.orange, Color.red, Color.pink]
+        default: return [Color.purple, Color.blue, Color.cyan]
+        }
+    }
+    
+    var body: some View {
+        LinearGradient(
+            colors: gradientColors,
+            startPoint: animateGradient ? .topLeading : .bottomTrailing,
+            endPoint: animateGradient ? .bottomTrailing : .topLeading
+        )
+        .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: animateGradient)
+        .onAppear {
+            animateGradient = true
+        }
+        .onChange(of: currentStep) {
+            withAnimation(.easeInOut(duration: 1)) {
+                animateGradient.toggle()
+            }
+        }
+    }
+}
+
+// MARK: - ガラスモーフィズム ボタンスタイル
+struct PrimaryGlassButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .fontWeight(.semibold)
+            .foregroundColor(.white)
+            .padding(.horizontal, 40)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.3),
+                                Color.white.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 25)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+struct SecondaryGlassButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .foregroundColor(.white.opacity(0.8))
+            .padding(.horizontal, 30)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }

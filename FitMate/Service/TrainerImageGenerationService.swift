@@ -172,7 +172,7 @@ class TrainerImageGenerationService {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             // [同じ処理ロジック...]
-            if let error = error {
+            if error != nil {
                 DispatchQueue.main.async {
                     self.generateDemoTrainerImage(preferences: preferences, completion: completion)
                 }
