@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Vision
 
 struct FoodAddView: View {
     @ObservedObject var recordViewModel: RecordViewModel
@@ -133,6 +134,7 @@ struct FoodAddView: View {
                             .font(.headline)
                         DatePicker("", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(CompactDatePickerStyle())
+                            .environment(\.locale, Locale(identifier: "ja_JP"))
                     }
                     
                     Spacer()
@@ -167,10 +169,20 @@ struct FoodAddView: View {
                 }
             )
             .sheet(isPresented: $showingCamera) {
-                ImagePicker(sourceType: .camera, selectedImage: $selectedImage, onImageSelected: recognizeFood)
+                ImagePicker(sourceType: .camera, selectedImage: $selectedImage, onImageSelected: {
+                    recognizeFood()
+                    if let img = selectedImage {
+                        recognizeText(from: img)
+                    }
+                })
             }
             .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(sourceType: .photoLibrary, selectedImage: $selectedImage, onImageSelected: recognizeFood)
+                ImagePicker(sourceType: .photoLibrary, selectedImage: $selectedImage, onImageSelected: {
+                    recognizeFood()
+                    if let img = selectedImage {
+                        recognizeText(from: img)
+                    }
+                })
             }
         }
     }
@@ -190,19 +202,72 @@ struct FoodAddView: View {
         recognitionResults = []
         
         foodRecognitionService.recognizeFood(from: image) { result in
-            isRecognizing = false
-            
-            switch result {
-            case .success(let results):
-                recognitionResults = Array(results.prefix(3)) // 上位3件を表示
-                if let topResult = results.first {
-                    selectRecognizedFood(topResult)
+            DispatchQueue.main.async {
+                isRecognizing = false
+                
+                switch result {
+                case .success(let results):
+                    recognitionResults = Array(results.prefix(3)) // 上位3件を表示
+                    if let topResult = results.first {
+                        selectRecognizedFood(topResult)
+                    }
+                case .failure(let error):
+                    print("認識エラー: \(error.localizedDescription)")
+                    // エラーハンドリング（アラート表示など）
                 }
-            case .failure(let error):
-                print("認識エラー: \(error.localizedDescription)")
-                // エラーハンドリング（アラート表示など）
             }
         }
+    }
+    
+    @MainActor
+    private func recognizeText(from image: UIImage) {
+        guard let cgImage = image.cgImage else { return }
+        
+        let request = VNRecognizeTextRequest { request, error in
+            guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
+            let texts = observations.compactMap { $0.topCandidates(1).first?.string }
+            guard let firstLine = texts.first else { return }
+            
+            // 商品名として最初の行を使う（数値等の場合はスキップ）
+            if !firstLine.contains("kcal"),
+               !firstLine.trimmingCharacters(in: .whitespaces).isEmpty,
+               Int(firstLine) == nil {
+                DispatchQueue.main.async {
+                    self.foodName = firstLine
+                }
+            }
+            // カロリー抽出
+            for text in texts {
+                if let cal = extractCalories(from: text) {
+                    DispatchQueue.main.async {
+                        self.calories = String(cal)
+                    }
+                    break
+                }
+            }
+        }
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["ja", "en"]
+        request.usesLanguageCorrection = true
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try handler.perform([request])
+            } catch {
+                print("OCRエラー: \(error)")
+            }
+        }
+    }
+    
+    private func extractCalories(from text: String) -> Int? {
+        let pattern = #"(\d+)\s*kcal"#
+        if let match = text.range(of: pattern, options: .regularExpression) {
+            let value = text[match]
+                .replacingOccurrences(of: "kcal", with: "")
+                .trimmingCharacters(in: .whitespaces)
+            return Int(value)
+        }
+        return nil
     }
 }
 
