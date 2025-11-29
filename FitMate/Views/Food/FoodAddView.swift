@@ -6,18 +6,24 @@
 import SwiftUI
 import Vision
 
+enum RecognitionMode { case ocr, api }
+
 struct FoodAddView: View {
+    @StateObject private var ocrViewModel = FoodOCRViewModel()
     @ObservedObject var recordViewModel: RecordViewModel
     let selectedMeal: MealType
     @State private var foodName = ""
     @State private var calories = ""
     @State private var selectedDate = Date()
+    
     @State private var showingImagePicker = false
-    @State private var showingCamera = false
+    @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var imageRecognitionMode: RecognitionMode?
     @State private var selectedImage: UIImage?
     @State private var isRecognizing = false
     @State private var recognitionResults: [FoodRecognitionService.FoodRecognitionResult] = []
     @State private var showingRecognitionResults = false
+    @State private var showingLiveCameraOCR = false
     @Environment(\.presentationMode) var presentationMode
     
     private let foodRecognitionService = FoodRecognitionService()
@@ -47,35 +53,41 @@ struct FoodAddView: View {
                         }
                     }
                     
-                    // カメラ・写真選択ボタン
+                    // カメラ・写真選択ボタン（認識モード別）
                     HStack(spacing: 15) {
                         Button(action: {
-                            showingCamera = true
+                            imageRecognitionMode = .ocr
+                            showingLiveCameraOCR = true
+                            // imageSourceType = .camera
+                            // showingImagePicker = true
                         }) {
                             VStack {
-                                Image(systemName: "camera.fill")
+                                Image(systemName: "camera.viewfinder")
                                     .font(.system(size: 30))
-                                Text("カメラ")
+                                Text("カロリー自動読取\n(OCR)")
                                     .font(.caption)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 80)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(10)
+                        }
+                        Button(action: {
+                            imageRecognitionMode = .api
+                            imageSourceType = .camera
+                            showingImagePicker = true
+                        }) {
+                            VStack {
+                                Image(systemName: "camera.metering.matrix")
+                                    .font(.system(size: 30))
+                                Text("写真認識\n(AI)")
+                                    .font(.caption)
+                                    .multilineTextAlignment(.center)
                             }
                             .frame(maxWidth: .infinity)
                             .frame(height: 80)
                             .background(Color.blue.opacity(0.1))
-                            .cornerRadius(10)
-                        }
-                        
-                        Button(action: {
-                            showingImagePicker = true
-                        }) {
-                            VStack {
-                                Image(systemName: "photo.fill")
-                                    .font(.system(size: 30))
-                                Text("写真")
-                                    .font(.caption)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 80)
-                            .background(Color.green.opacity(0.1))
                             .cornerRadius(10)
                         }
                     }
@@ -168,21 +180,36 @@ struct FoodAddView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
             )
-            .sheet(isPresented: $showingCamera) {
-                ImagePicker(sourceType: .camera, selectedImage: $selectedImage, onImageSelected: {
-                    recognizeFood()
-                    if let img = selectedImage {
-                        recognizeText(from: img)
-                    }
-                })
-            }
             .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(sourceType: .photoLibrary, selectedImage: $selectedImage, onImageSelected: {
-                    recognizeFood()
-                    if let img = selectedImage {
-                        recognizeText(from: img)
+                ImagePicker(
+                    sourceType: imageSourceType,
+                    selectedImage: $selectedImage,
+                    onImageSelected: {
+                        guard let mode = imageRecognitionMode, let img = selectedImage else { return }
+                        switch mode {
+                        case .ocr:
+                            recognizeText(from: img)
+                        case .api:
+                            recognizeFood()
+                        }
                     }
-                })
+                )
+            }
+        }
+        .sheet(isPresented: $showingLiveCameraOCR) {
+            LiveCameraOCRView(viewModel: ocrViewModel)
+        }
+        .onChange(of: ocrViewModel.calorieValue) { newValue in
+            if let kcal = newValue {
+                calories = String(kcal)
+            }
+        }
+        .onChange(of: ocrViewModel.recognizedText) { newText in
+            // 一行目を商品名として使うなど
+            if foodName.isEmpty {
+                if let firstLine = newText.split(separator: "\n").first {
+                    foodName = String(firstLine)
+                }
             }
         }
     }
