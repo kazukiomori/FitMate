@@ -25,6 +25,12 @@ struct FoodAddView: View {
     @State private var showingRecognitionResults = false
     @State private var showingLiveCameraOCR = false
     @Environment(\.presentationMode) var presentationMode
+
+    // 栄養素自動取得用
+    @StateObject private var nutritionVM = NutritionViewModel()
+    
+    // 自動取得した栄養素情報（カロリー以外も表示用）
+    @State private var fetchedNutrition: NutritionResponse?
     
     private let foodRecognitionService = FoodRecognitionService()
     
@@ -58,8 +64,6 @@ struct FoodAddView: View {
                         Button(action: {
                             imageRecognitionMode = .ocr
                             showingLiveCameraOCR = true
-                            // imageSourceType = .camera
-                            // showingImagePicker = true
                         }) {
                             VStack {
                                 Image(systemName: "camera.viewfinder")
@@ -133,14 +137,48 @@ struct FoodAddView: View {
                     VStack(alignment: .leading, spacing: 15) {
                         Text("食品名")
                             .font(.headline)
-                        TextField("例: サラダ", text: $foodName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                        HStack {
+                            TextField("例: サラダ", text: $foodName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            Button(action: {
+                                Task {
+                                    await autoFillNutrition()
+                                }
+                            }) {
+                                if nutritionVM.isLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Text("自動入力")
+                                        .font(.caption)
+                                }
+                            }
+                            .disabled(foodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || nutritionVM.isLoading)
+                        }
+                        if let error = nutritionVM.errorMessage {
+                            Text(error)
+                                .foregroundColor(.red)
+                                .font(.caption)
+                        }
                         
                         Text("カロリー")
                             .font(.headline)
                         TextField("例: 150", text: $calories)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .keyboardType(.numberPad)
+                        
+                        if let n = fetchedNutrition {
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack {
+                                    Text("たんぱく質: \(String(format: "%.1f", n.protein_g)) g")
+                                    Text("脂質: \(String(format: "%.1f", n.fat_g)) g")
+                                    Text("炭水化物: \(String(format: "%.1f", n.carbs_g)) g")
+                                }
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            }
+                            .padding(.top, 2)
+                        }
                         
                         Text("日時")
                             .font(.headline)
@@ -211,6 +249,17 @@ struct FoodAddView: View {
                     foodName = String(firstLine)
                 }
             }
+        }
+    }
+    
+    // 栄養素自動入力機能
+    private func autoFillNutrition() async {
+        let query = foodName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return }
+        await nutritionVM.search(query: query)
+        if let response = nutritionVM.result {
+            calories = String(Int(response.calories_kcal.rounded()))
+            fetchedNutrition = response
         }
     }
     
