@@ -1,8 +1,3 @@
-//
-//  FoodAddView.swift
-//  FitMate
-//
-
 import SwiftUI
 import Vision
 
@@ -24,193 +19,153 @@ struct FoodAddView: View {
     @State private var recognitionResults: [FoodRecognitionService.FoodRecognitionResult] = []
     @State private var showingRecognitionResults = false
     @State private var showingLiveCameraOCR = false
+    @State private var showingRecognitionActionSheet = false
     @Environment(\.presentationMode) var presentationMode
 
     // 栄養素自動取得用
     @StateObject private var nutritionVM = NutritionViewModel()
-    
-    // 自動取得した栄養素情報（カロリー以外も表示用）
     @State private var fetchedNutrition: NutritionResponse?
     
     private let foodRecognitionService = FoodRecognitionService()
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // 撮影した画像表示
-                    if let image = selectedImage {
-                        VStack {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(maxHeight: 200)
-                                .cornerRadius(10)
-                            
-                            if isRecognizing {
-                                HStack {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                    Text("食事を認識中...")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // カメラ・写真選択ボタン（認識モード別）
-                    HStack(spacing: 15) {
-                        Button(action: {
-                            imageRecognitionMode = .ocr
-                            showingLiveCameraOCR = true
-                        }) {
-                            VStack {
-                                Image(systemName: "camera.viewfinder")
-                                    .font(.system(size: 30))
-                                Text("カロリー自動読取\n(OCR)")
-                                    .font(.caption)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 80)
-                            .background(Color.orange.opacity(0.1))
-                            .cornerRadius(10)
-                        }
-                        Button(action: {
-                            imageRecognitionMode = .api
-                            imageSourceType = .camera
-                            showingImagePicker = true
-                        }) {
-                            VStack {
-                                Image(systemName: "camera.metering.matrix")
-                                    .font(.system(size: 30))
-                                Text("写真認識\n(AI)")
-                                    .font(.caption)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 80)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(10)
-                        }
-                    }
-                    
-                    // 認識結果表示
-                    if !recognitionResults.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("認識結果")
-                                .font(.headline)
-                            
-                            ForEach(Array(recognitionResults.enumerated()), id: \.offset) { index, result in
-                                Button(action: {
-                                    selectRecognizedFood(result)
-                                }) {
-                                    HStack {
-                                        VStack(alignment: .leading) {
-                                            Text(result.label)
-                                                .font(.subheadline)
-                                                .foregroundColor(.primary)
-                                            Text("信頼度: \(Int(result.confidence * 100))%")
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Text("選択")
-                                            .font(.caption)
-                                            .foregroundColor(.blue)
-                                    }
-                                    .padding()
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(8)
-                                }
-                            }
-                        }
-                    }
-                    
-                    Text("または手動で入力")
-                        .foregroundColor(.gray)
-                    
-                    // 手動入力フォーム
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("食品名")
+            VStack(spacing: 24) {
+                // 画像選択 & 認識ボタン
+                Button(action: {
+                    showingRecognitionActionSheet = true
+                }) {
+                    HStack {
+                        Image(systemName: "camera.metering.matrix")
+                            .font(.system(size: 24, weight: .bold))
+                        Text("画像から入力")
                             .font(.headline)
-                        HStack {
-                            TextField("例: サラダ", text: $foodName)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                            Button(action: {
-                                Task {
-                                    await autoFillNutrition()
-                                }
-                            }) {
-                                if nutritionVM.isLoading {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Text("自動入力")
-                                        .font(.caption)
-                                }
-                            }
-                            .disabled(foodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || nutritionVM.isLoading)
-                        }
-                        if let error = nutritionVM.errorMessage {
-                            Text(error)
-                                .foregroundColor(.red)
-                                .font(.caption)
-                        }
-                        
-                        Text("カロリー")
-                            .font(.headline)
-                        TextField("例: 150", text: $calories)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.numberPad)
-                        
-                        if let n = fetchedNutrition {
-                            VStack(alignment: .leading, spacing: 5) {
-                                HStack {
-                                    Text("たんぱく質: \(String(format: "%.1f", n.protein_g)) g")
-                                    Text("脂質: \(String(format: "%.1f", n.fat_g)) g")
-                                    Text("炭水化物: \(String(format: "%.1f", n.carbs_g)) g")
-                                }
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            }
-                            .padding(.top, 2)
-                        }
-                        
-                        Text("日時")
-                            .font(.headline)
-                        DatePicker("", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
-                            .datePickerStyle(CompactDatePickerStyle())
-                            .environment(\.locale, Locale(identifier: "ja_JP"))
                     }
-                    
-                    Spacer()
-                    
-                    // 追加ボタン
-                    Button("追加") {
-                        if !foodName.isEmpty, let cal = Int(calories) {
-                            let newEntry = FoodEntry(
-                                name: foodName,
-                                calories: cal,
-                                time: selectedDate,
-                                mealType: selectedMeal
-                            )
-                            recordViewModel.addFoodEntry(newEntry)
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                    }
-                    .disabled(foodName.isEmpty || Int(calories) == nil)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
                     .padding()
-                    .background(foodName.isEmpty || Int(calories) == nil ? Color.gray : Color.blue)
-                    .cornerRadius(10)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue.opacity(0.15))
+                    .cornerRadius(12)
                 }
-                .padding()
+                .actionSheet(isPresented: $showingRecognitionActionSheet) {
+                    ActionSheet(
+                        title: Text("認識方法を選択"),
+                        buttons: [
+                            .default(Text("カロリー自動読取 (OCR)")) {
+                                imageRecognitionMode = .ocr
+                                showingLiveCameraOCR = true
+                            },
+                            .default(Text("写真認識 (AI)")) {
+                                imageRecognitionMode = .api
+                                imageSourceType = .camera
+                                showingImagePicker = true
+                            },
+                            .cancel()
+                        ]
+                    )
+                }
+                
+                // 画像プレビュー
+                if let image = selectedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 140)
+                        .cornerRadius(8)
+                        .padding(.horizontal)
+                }
+                
+                // isRecognizing
+                if isRecognizing {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("認識中...")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+                
+                // フォーム
+                VStack(alignment: .leading, spacing: 18) {
+                    // 食品名 + 自動入力
+                    HStack {
+                        TextField("食品名", text: $foodName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                        Button(action: {
+                            Task { await autoFillNutrition() }
+                        }) {
+                            if nutritionVM.isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text("自動入力")
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.gray.opacity(0.18))
+                                    .cornerRadius(6)
+                            }
+                        }
+                        .disabled(foodName.trimmingCharacters(in: .whitespaces).isEmpty || nutritionVM.isLoading)
+                    }
+                    if let error = nutritionVM.errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                    
+                    // カロリー
+                    TextField("カロリー (kcal)", text: $calories)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .keyboardType(.numberPad)
+                    
+                    // 栄養素サマリー
+                    if let n = fetchedNutrition {
+                        HStack {
+                            Label("\(String(format: "%.1f", n.protein_g))g", systemImage: "bolt.fill")
+                                .foregroundColor(.orange)
+                            Label("\(String(format: "%.1f", n.fat_g))g", systemImage: "drop.fill")
+                                .foregroundColor(.blue)
+                            Label("\(String(format: "%.1f", n.carbs_g))g", systemImage: "leaf.fill")
+                                .foregroundColor(.green)
+                        }
+                        .font(.caption)
+                        .padding(.top, 2)
+                    }
+                    
+                    // 日時
+                    DatePicker("日時", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .environment(\.locale, Locale(identifier: "ja_JP"))
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+                
+                // 追加ボタン
+                Button(action: {
+                    if !foodName.isEmpty, let cal = Int(calories) {
+                        let newEntry = FoodEntry(
+                            name: foodName,
+                            calories: cal,
+                            time: selectedDate,
+                            mealType: selectedMeal
+                        )
+                        recordViewModel.addFoodEntry(newEntry)
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }) {
+                    Text("追加")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(foodName.isEmpty || Int(calories) == nil ? Color.gray : Color.blue)
+                        .cornerRadius(10)
+                }
+                .disabled(foodName.isEmpty || Int(calories) == nil)
             }
+            .padding(.top)
             .navigationTitle("食事を追加")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(leading:
@@ -218,37 +173,71 @@ struct FoodAddView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
             )
-            .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(
-                    sourceType: imageSourceType,
-                    selectedImage: $selectedImage,
-                    onImageSelected: {
-                        guard let mode = imageRecognitionMode, let img = selectedImage else { return }
-                        switch mode {
-                        case .ocr:
-                            recognizeText(from: img)
-                        case .api:
-                            recognizeFood()
+            // 認識結果シート
+            .sheet(isPresented: $showingRecognitionResults) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("認識結果").font(.headline).padding()
+                    Divider()
+                    ForEach(Array(recognitionResults.enumerated()), id: \.offset) { index, result in
+                        Button(action: {
+                            selectRecognizedFood(result)
+                            showingRecognitionResults = false
+                        }) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(result.label)
+                                        .font(.body)
+                                    Text("信頼度: \(Int(result.confidence * 100))%")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .foregroundColor(.blue)
+                            }
+                            .padding(.vertical, 10)
+                            .padding(.horizontal)
+                        }
+                        if index < recognitionResults.count - 1 {
+                            Divider()
                         }
                     }
-                )
+                    Spacer()
+                }
+                .presentationDetents([.medium])
             }
-        }
-        .sheet(isPresented: $showingLiveCameraOCR) {
-            LiveCameraOCRView(viewModel: ocrViewModel)
-        }
-        .onChange(of: ocrViewModel.calorieValue) { newValue in
-            if let kcal = newValue {
-                calories = String(kcal)
+            // カメラOCR
+            .sheet(isPresented: $showingLiveCameraOCR) {
+                LiveCameraOCRView(viewModel: ocrViewModel)
             }
-        }
-        .onChange(of: ocrViewModel.recognizedText) { newText in
-            // 一行目を商品名として使うなど
-            if foodName.isEmpty {
-                if let firstLine = newText.split(separator: "\n").first {
-                    foodName = String(firstLine)
+            // OCR/ラベル認識反映
+            .onChange(of: ocrViewModel.calorieValue) { newValue in
+                if let kcal = newValue {
+                    calories = String(kcal)
                 }
             }
+            .onChange(of: ocrViewModel.recognizedText) { newText in
+                if foodName.isEmpty {
+                    if let firstLine = newText.split(separator: "\n").first {
+                        foodName = String(firstLine)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(
+                sourceType: imageSourceType,
+                selectedImage: $selectedImage,
+                onImageSelected: {
+                    guard let mode = imageRecognitionMode, let img = selectedImage else { return }
+                    switch mode {
+                    case .ocr:
+                        recognizeText(from: img)
+                    case .api:
+                        recognizeFood()
+                    }
+                }
+            )
         }
     }
     
@@ -283,13 +272,10 @@ struct FoodAddView: View {
                 
                 switch result {
                 case .success(let results):
-                    recognitionResults = Array(results.prefix(3)) // 上位3件を表示
-                    if let topResult = results.first {
-                        selectRecognizedFood(topResult)
-                    }
+                    recognitionResults = Array(results.prefix(3))
+                    showingRecognitionResults = true
                 case .failure(let error):
                     print("認識エラー: \(error.localizedDescription)")
-                    // エラーハンドリング（アラート表示など）
                 }
             }
         }
@@ -304,7 +290,6 @@ struct FoodAddView: View {
             let texts = observations.compactMap { $0.topCandidates(1).first?.string }
             guard let firstLine = texts.first else { return }
             
-            // 商品名として最初の行を使う（数値等の場合はスキップ）
             if !firstLine.contains("kcal"),
                !firstLine.trimmingCharacters(in: .whitespaces).isEmpty,
                Int(firstLine) == nil {
@@ -312,7 +297,6 @@ struct FoodAddView: View {
                     self.foodName = firstLine
                 }
             }
-            // カロリー抽出
             for text in texts {
                 if let cal = extractCalories(from: text) {
                     DispatchQueue.main.async {
@@ -347,6 +331,8 @@ struct FoodAddView: View {
     }
 }
 
+// 画像Pickerはそのまま
+
 struct ImagePicker: UIViewControllerRepresentable {
     let sourceType: UIImagePickerController.SourceType
     @Binding var selectedImage: UIImage?
@@ -369,9 +355,7 @@ struct ImagePicker: UIViewControllerRepresentable {
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let parent: ImagePicker
         
-        init(_ parent: ImagePicker) {
-            self.parent = parent
-        }
+        init(_ parent: ImagePicker) { self.parent = parent }
         
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let image = info[.originalImage] as? UIImage {
