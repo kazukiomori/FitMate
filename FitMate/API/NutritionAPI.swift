@@ -14,6 +14,11 @@ struct NutritionAPI {
         ]
         let url = components.url!
         
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        request.setValue(AppConfig.clientToken, forHTTPHeaderField: "x-client-token")
+        
         let (data, response) = try await URLSession.shared.data(from: url)
         
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
