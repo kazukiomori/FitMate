@@ -19,7 +19,13 @@ struct NutritionAPI {
         
         request.setValue(AppConfig.clientToken, forHTTPHeaderField: "x-client-token")
         
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        if let http = response as? HTTPURLResponse {
+            print("Status:", http.statusCode)
+            print("Body:", String(data: data, encoding: .utf8) ?? "nil")
+            print("TOKEN:", AppConfig.clientToken)
+        }
         
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             throw URLError(.badServerResponse)
