@@ -25,6 +25,7 @@ struct NutritionAPI {
             print("Status:", http.statusCode)
             print("Body:", String(data: data, encoding: .utf8) ?? "nil")
             print("TOKEN:", AppConfig.clientToken)
+            print("Request:", request)
         }
         
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
