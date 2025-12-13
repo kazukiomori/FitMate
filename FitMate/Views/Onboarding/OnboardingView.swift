@@ -60,8 +60,11 @@ struct OnboardingView: View {
                             }
                         }
                         .buttonStyle(SecondaryGlassButtonStyle())
+                        .frame(maxWidth: .infinity)
                     } else {
-                        Spacer()
+                        // Invisible dummy to keep button widths equal
+                        Color.clear
+                            .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                     }
                     
                     Button(currentStep == totalSteps - 1 ? "始める" : "次へ") {
@@ -76,7 +79,9 @@ struct OnboardingView: View {
                         }
                     }
                     .buttonStyle(PrimaryGlassButtonStyle())
+                    .frame(maxWidth: .infinity)
                 }
+                .frame(height: 56) // ボタン高さを揃える
                 .padding(.horizontal, 30)
                 .padding(.bottom, 40)
             }
@@ -155,8 +160,8 @@ struct SecondaryGlassButtonStyle: ButtonStyle {
             .font(.subheadline)
             .fontWeight(.medium)
             .foregroundColor(.white.opacity(0.8))
-            .padding(.horizontal, 30)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 40) //
+            .padding(.vertical, 16)   //
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.white.opacity(0.1))
@@ -169,3 +174,4 @@ struct SecondaryGlassButtonStyle: ButtonStyle {
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
+
