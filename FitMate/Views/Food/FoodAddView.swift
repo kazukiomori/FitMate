@@ -1,5 +1,6 @@
 import SwiftUI
 import Vision
+import Foundation
 
 enum RecognitionMode { case ocr, api }
 
@@ -259,24 +260,39 @@ struct FoodAddView: View {
         calories = String(estimatedCalories)
     }
     
-    // 食事認識実行
     private func recognizeFood() {
         guard let image = selectedImage else { return }
-        
+
         isRecognizing = true
         recognitionResults = []
-        
-        foodRecognitionService.recognizeFood(from: image) { result in
-            DispatchQueue.main.async {
-                isRecognizing = false
-                
-                switch result {
-                case .success(let results):
-                    recognitionResults = Array(results.prefix(3))
-                    showingRecognitionResults = true
-                case .failure(let error):
-                    print("認識エラー: \(error.localizedDescription)")
+
+        // 画像をJPEGデータ化
+        guard let data = image.jpegData(compressionQuality: 0.8) else {
+            isRecognizing = false
+            print("画像のエンコードに失敗しました")
+            return
+        }
+
+        Task {
+            do {
+                let response = try await VisionMenuAPI.recognizeMenu(imageData: data)
+
+                // 受け取ったメニュー名で栄養情報を取得
+                let nutrition = try await NutritionAPI.fetchNutrition(query: response.menu_name)
+
+                await MainActor.run {
+                    // メニュー名反映
+                    self.foodName = response.menu_name
+                    // 栄養情報反映
+                    self.calories = String(Int(nutrition.calories_kcal.rounded()))
+                    self.fetchedNutrition = nutrition
+                    self.isRecognizing = false
                 }
+            } catch {
+                await MainActor.run {
+                    self.isRecognizing = false
+                }
+                print("VisionMenuAPI 認識エラー: \(error.localizedDescription)")
             }
         }
     }
