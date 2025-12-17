@@ -6,13 +6,16 @@ struct MenuRecognitionResponse: Codable {
 }
 
 struct VisionMenuAPI {
-    static let url = URL(string: "https://YOUR_API_ID.execute-api.ap-northeast-1.amazonaws.com/vision-menu")!
 
     static func recognizeMenu(imageData: Data) async throws -> MenuRecognitionResponse {
+        guard let base = URL(string: AppConfig.baseURL) else {
+            throw URLError(.badURL)
+        }
+        let url = base.appendingPathComponent("vision-menu")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(AppConfig.clientToken, forHTTPHeaderField: "x-client-token") 
+        request.setValue(AppConfig.clientToken, forHTTPHeaderField: "x-client-token")
 
         let base64Image = imageData.base64EncodedString()
         let body: [String: Any] = [

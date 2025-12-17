@@ -5,10 +5,9 @@
 import SwiftUI
 
 struct NutritionAPI {
-    static let baseURL = "https://et40lsliki.execute-api.ap-northeast-1.amazonaws.com"
     
     static func fetchNutrition(query: String) async throws -> NutritionResponse {
-        var components = URLComponents(string: baseURL + "/nutrition")!
+        var components = URLComponents(string: AppConfig.baseURL + "/nutrition")!
         components.queryItems = [
             URLQueryItem(name: "query", value: query)
         ]
