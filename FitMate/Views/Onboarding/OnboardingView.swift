@@ -8,6 +8,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @EnvironmentObject var user: User
+    @AppStorage("isOnboardingComplete") private var isOnboardingComplete: Bool = false
     @State private var currentStep = 0
     @State private var offset: CGFloat = 0
     private let totalSteps = 4
@@ -70,7 +71,7 @@ struct OnboardingView: View {
                     Button(currentStep == totalSteps - 1 ? "始める" : "次へ") {
                         if currentStep == totalSteps - 1 {
                             withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
-                                user.isOnboardingComplete = true
+                                isOnboardingComplete = true
                             }
                         } else {
                             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {

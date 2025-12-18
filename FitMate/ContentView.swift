@@ -6,10 +6,11 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("isOnboardingComplete") private var isOnboardingComplete: Bool = false
     @StateObject private var user = User()
     
     var body: some View {
-        if user.isOnboardingComplete {
+        if isOnboardingComplete {
             MainTabView()
                 .environmentObject(user)
         } else {
