@@ -46,7 +46,7 @@ struct HomeView: View {
                             }
                         }
                         
-                        HStack(spacing: 20) {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                             StatCard(
                                 title: "残り",
                                 value: "\(targetCalories - todayCalories)kcal",
@@ -56,11 +56,6 @@ struct HomeView: View {
                                 title: "消費",
                                 value: "\(Int(healthKitManager.activeEnergyBurned))kcal",
                                 color: .red
-                            )
-                            StatCard(
-                                title: "水分",
-                                value: "1.2L",
-                                color: .blue
                             )
                         }
                     }
@@ -264,3 +259,4 @@ struct HealthActivityCard: View {
         }
     }
 }
+
