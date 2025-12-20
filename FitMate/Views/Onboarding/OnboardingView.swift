@@ -3,7 +3,6 @@
 //  FitMate
 //
 
-// MARK: - Views/Onboarding/OnboardingView.swift (モダンUI版)
 import SwiftUI
 
 struct OnboardingView: View {
@@ -161,8 +160,8 @@ struct SecondaryGlassButtonStyle: ButtonStyle {
             .font(.subheadline)
             .fontWeight(.medium)
             .foregroundColor(.white.opacity(0.8))
-            .padding(.horizontal, 40) //
-            .padding(.vertical, 16)   //
+            .padding(.horizontal, 40)
+            .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.white.opacity(0.1))
