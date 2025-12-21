@@ -11,4 +11,6 @@ struct AppConfig {
     }
     
     static let baseURL = "https://et40lsliki.execute-api.ap-northeast-1.amazonaws.com"
+    
+    static let visionURL = "https://79the260tg.execute-api.ap-northeast-1.amazonaws.com"
 }
