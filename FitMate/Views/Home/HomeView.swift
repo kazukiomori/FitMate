@@ -8,7 +8,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var user: User
     @StateObject private var healthKitManager = HealthKitManager()
-    @State private var todayCalories = 1200
+    @State private var todayCalories = 0
     @State private var targetCalories = 1800
     
     var body: some View {
