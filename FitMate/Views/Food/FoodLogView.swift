@@ -62,6 +62,16 @@ struct FoodLogView: View {
 struct TodayCaloriesSummary: View {
     let foodEntries: [FoodEntry]
     
+    private let today: Date = Calendar.current.startOfDay(for: Date())
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter
+    }
+    
     private var totalCalories: Int {
         foodEntries.reduce(0) { $0 + $1.calories }
     }
@@ -76,9 +86,15 @@ struct TodayCaloriesSummary: View {
     
     var body: some View {
         VStack(spacing: 15) {
-            Text("今日の摂取カロリー")
-                .font(.headline)
-                .fontWeight(.bold)
+            HStack {
+                Text("今日の摂取カロリー")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                Spacer()
+                Text(dateFormatter.string(from: today))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
             
             // 総カロリー
             Text("\(totalCalories)")
