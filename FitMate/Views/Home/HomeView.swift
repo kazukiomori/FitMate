@@ -10,6 +10,15 @@ struct HomeView: View {
     @StateObject private var healthKitManager = HealthKitManager()
     @State private var todayCalories = 0
     @State private var targetCalories = 1800
+
+    private let today: Date = Calendar.current.startOfDay(for: Date())
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }
     
     var body: some View {
         NavigationView {
@@ -17,9 +26,15 @@ struct HomeView: View {
                 VStack(spacing: 20) {
                     // 今日の概要カード
                     VStack(spacing: 15) {
-                        Text("今日の進捗")
-                            .font(.title2)
-                            .fontWeight(.bold)
+                        HStack {
+                            Text("今日の進捗")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            Spacer()
+                            Text(dateFormatter.string(from: today))
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
                         
                         // カロリー円グラフ風
                         ZStack {
