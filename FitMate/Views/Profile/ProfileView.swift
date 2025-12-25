@@ -42,6 +42,13 @@ struct ProfileView: View {
                 }
                 
                 Section("設定") {
+                    NavigationLink(destination: GoalSettingView().environmentObject(user)) {
+                        HStack {
+                            Image(systemName: "target")
+                            Text("目標を修正")
+                        }
+                    }
+                    
                     HStack {
                         Image(systemName: "bell")
                         Text("通知設定")
