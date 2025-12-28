@@ -253,10 +253,10 @@ struct HealthActivityCard: View {
             }
         }
         .padding()
+        .frame(maxWidth: .infinity, alignment: .center)
         .background(Color.white)
         .cornerRadius(15)
         .shadow(radius: 5)
-        .padding(.horizontal)
     }
     
     private func getActivityLevel() -> (title: String, color: Color) {
