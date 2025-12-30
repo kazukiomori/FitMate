@@ -97,7 +97,7 @@ struct TodayCaloriesSummary: View {
             }
             
             // 総カロリー
-            Text("\(totalCalories)")
+            Text("\(totalCalories) kcal")
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundColor(.blue)
