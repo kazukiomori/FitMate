@@ -9,20 +9,25 @@ struct FoodLogView: View {
     @StateObject private var recordViewModel = RecordViewModel()
     @State private var selectedMeal: MealType = .breakfast
     @State private var showingFoodAdd = false
+    @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     
-    // 今日の食事データ
-    private var todayFoodEntries: [FoodEntry] {
-        let today = Calendar.current.startOfDay(for: Date())
+    // 選択日の食事データ
+    private var entriesForSelectedDate: [FoodEntry] {
         return recordViewModel.dailyRecords
-            .first { Calendar.current.isDate($0.date, inSameDayAs: today) }?
+            .first { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }?
             .foodEntries ?? []
     }
-    
+
     var body: some View {
         NavigationView {
             VStack {
-                // 今日のカロリー概要
-                TodayCaloriesSummary(foodEntries: todayFoodEntries)
+                // カレンダー（月表示）
+                MiniMonthCalendar(selectedDate: $selectedDate)
+                    .padding(.horizontal)
+                    .padding(.top)
+                
+                // 選択日のカロリー概要
+                DayCaloriesSummary(date: selectedDate, foodEntries: entriesForSelectedDate, weight: nil)
                 
                 // 食事タイプ選択
                 Picker("食事", selection: $selectedMeal) {
@@ -35,7 +40,7 @@ struct FoodLogView: View {
                 
                 // 食事リスト
                 List {
-                    ForEach(todayFoodEntries.filter { $0.mealType == selectedMeal }) { entry in
+                    ForEach(entriesForSelectedDate.filter { $0.mealType == selectedMeal }) { entry in
                         FoodEntryRow(entry: entry)
                     }
                     .onDelete { indexSet in
@@ -59,23 +64,23 @@ struct FoodLogView: View {
     }
 }
 
-struct TodayCaloriesSummary: View {
+struct DayCaloriesSummary: View {
+    let date: Date
     let foodEntries: [FoodEntry]
-    
-    private let today: Date = Calendar.current.startOfDay(for: Date())
-    
+    let weight: Double?
+
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        formatter.locale = Locale(identifier: "ja_JP")
         return formatter
     }
-    
+
     private var totalCalories: Int {
         foodEntries.reduce(0) { $0 + $1.calories }
     }
-    
+
     private var caloriesByMeal: [MealType: Int] {
         var result: [MealType: Int] = [:]
         for meal in MealType.allCases {
@@ -83,25 +88,25 @@ struct TodayCaloriesSummary: View {
         }
         return result
     }
-    
+
     var body: some View {
         VStack(spacing: 15) {
             HStack {
-                Text("今日の摂取カロリー")
+                Text("摂取カロリー")
                     .font(.headline)
                     .fontWeight(.bold)
                 Spacer()
-                Text(dateFormatter.string(from: today))
+                Text(dateFormatter.string(from: date))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-            
+
             // 総カロリー
             Text("\(totalCalories) kcal")
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundColor(.blue)
-            
+
             // 食事別カロリー
             HStack(spacing: 20) {
                 ForEach(MealType.allCases, id: \.self) { meal in
@@ -115,12 +120,132 @@ struct TodayCaloriesSummary: View {
                     }
                 }
             }
+
+            if let weight {
+                Divider()
+                HStack {
+                    Label("体重", systemImage: "scalemass")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(String(format: "%.1f kg", weight))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+            }
         }
         .padding()
         .background(Color.white)
         .cornerRadius(15)
         .shadow(radius: 5)
         .padding(.horizontal)
+    }
+}
+
+struct MiniMonthCalendar: View {
+    @Binding var selectedDate: Date
+    @State private var displayedDate: Date = Date()
+
+    private let calendar = Calendar.current
+    private let weekdays = ["日", "月", "火", "水", "木", "金", "土"]
+
+    private var monthTitle: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.dateFormat = "yyyy年M月"
+        return f.string(from: displayedDate)
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Button(action: { changeMonth(-1) }) {
+                    Image(systemName: "chevron.left")
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+                Text(monthTitle)
+                    .font(.headline)
+                Spacer()
+
+                Button(action: { changeMonth(1) }) {
+                    Image(systemName: "chevron.right")
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack {
+                ForEach(weekdays, id: \.self) { w in
+                    Text(w)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
+                ForEach(daysForGrid(), id: \.self) { date in
+                    DayCell(date: date,
+                            isInMonth: calendar.isDate(date, equalTo: displayedDate, toGranularity: .month),
+                            isSelected: calendar.isDate(date, inSameDayAs: selectedDate)) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedDate = date
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear { displayedDate = selectedDate }
+    }
+
+    private func changeMonth(_ delta: Int) {
+        if let newDate = calendar.date(byAdding: .month, value: delta, to: displayedDate) {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                displayedDate = newDate
+            }
+        }
+    }
+
+    private func daysForGrid() -> [Date] {
+        let startOfMonth = calendar.dateInterval(of: .month, for: displayedDate)!.start
+        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: startOfMonth))!
+        return (0..<42).compactMap { calendar.date(byAdding: .day, value: $0, to: startOfWeek) }
+    }
+
+    private struct DayCell: View {
+        let date: Date
+        let isInMonth: Bool
+        let isSelected: Bool
+        let onTap: () -> Void
+
+        private var dayString: String {
+            let f = DateFormatter()
+            f.dateFormat = "d"
+            return f.string(from: date)
+        }
+
+        var body: some View {
+            Button(action: onTap) {
+                Text(dayString)
+                    .font(.system(size: 14, weight: isSelected ? .bold : .medium))
+                    .foregroundColor(fg)
+                    .frame(height: 32)
+                    .frame(maxWidth: .infinity)
+                    .background(bg)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+
+        private var fg: Color {
+            if isSelected { return .white }
+            return isInMonth ? .primary : .secondary.opacity(0.4)
+        }
+        private var bg: Color {
+            if isSelected { return Color.blue }
+            return Color.clear
+        }
     }
 }
 
