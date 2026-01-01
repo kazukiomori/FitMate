@@ -20,35 +20,40 @@ struct FoodLogView: View {
 
     var body: some View {
         NavigationView {
-            VStack {
-                // カレンダー（月表示）
-                MiniMonthCalendar(selectedDate: $selectedDate)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // カレンダー（月表示）
+                    MiniMonthCalendar(selectedDate: $selectedDate)
+                        .padding(.horizontal)
+                        .padding(.top)
+                    
+                    // 選択日のカロリー概要
+                    DayCaloriesSummary(date: selectedDate, foodEntries: entriesForSelectedDate, weight: nil)
+                    
+                    // 食事タイプ選択
+                    Picker("食事", selection: $selectedMeal) {
+                        ForEach(MealType.allCases, id: \.self) { meal in
+                            Text(meal.rawValue).tag(meal)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding()
+                    
+                    // 食事リスト（スクロール統合）
+                    LazyVStack(spacing: 0) {
+                        let items = entriesForSelectedDate.filter { $0.mealType == selectedMeal }
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, entry in
+                            FoodEntryRow(entry: entry)
+                                .padding(.vertical, 8)
+                            if index < items.count - 1 {
+                                Divider()
+                            }
+                        }
+                    }
                     .padding(.horizontal)
-                    .padding(.top)
-                
-                // 選択日のカロリー概要
-                DayCaloriesSummary(date: selectedDate, foodEntries: entriesForSelectedDate, weight: nil)
-                
-                // 食事タイプ選択
-                Picker("食事", selection: $selectedMeal) {
-                    ForEach(MealType.allCases, id: \.self) { meal in
-                        Text(meal.rawValue).tag(meal)
-                    }
+                    
+                    Spacer(minLength: 0)
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-                
-                // 食事リスト
-                List {
-                    ForEach(entriesForSelectedDate.filter { $0.mealType == selectedMeal }) { entry in
-                        FoodEntryRow(entry: entry)
-                    }
-                    .onDelete { indexSet in
-                        // 削除機能（実装可能）
-                    }
-                }
-                
-                Spacer()
             }
             .navigationTitle("食事記録")
             .navigationBarItems(trailing:
