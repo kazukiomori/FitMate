@@ -11,4 +11,7 @@ struct FoodEntry: Identifiable {
     let calories: Int
     let time: Date
     let mealType: MealType
+    let fat: Double? = nil
+    let carbs: Double? = nil
+    let protein: Double? = nil
 }
