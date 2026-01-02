@@ -33,7 +33,7 @@ struct FoodLogView: View {
                     // 食事タイプ選択
                     Picker("食事", selection: $selectedMeal) {
                         ForEach(MealType.allCases, id: \.self) { meal in
-                            Text(meal.rawValue).tag(meal)
+                            Text(meal.title).tag(meal)
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
@@ -116,7 +116,7 @@ struct DayCaloriesSummary: View {
             HStack(spacing: 20) {
                 ForEach(MealType.allCases, id: \.self) { meal in
                     VStack {
-                        Text(meal.rawValue)
+                        Text(meal.title)
                             .font(.caption)
                             .foregroundColor(.gray)
                         Text("\(caloriesByMeal[meal] ?? 0)kcal")
