@@ -46,5 +46,20 @@ class FoodDataService: ObservableObject {
             print("Failed to save FoodEntry: \(error)")
         }
     }
+    
+    // 全ての食事記録を読み込み
+    func loadFoodEntries() {
+        let request: NSFetchRequest<FoodEntryEntity> = FoodEntryEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \FoodEntryEntity.time, ascending: false)]
+        
+        do {
+            let entities = try context.fetch(request)
+            
+            print("体重記録を読み込みました: 件")
+        } catch {
+            print("体重記録読み込みエラー: \(error)")
+            
+        }
+    }
 }
 
