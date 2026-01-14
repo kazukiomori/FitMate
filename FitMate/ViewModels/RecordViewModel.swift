@@ -30,7 +30,7 @@ class RecordViewModel: ObservableObject {
         weightDataService.saveWeightEntry(weight: weight, date: date, note: note)
         
         // DailyRecord も更新
-        updateDailyRecord(for: date, weightEntry: WeightEntry(weight: weight, date: date, note: note))
+        updateDailyRecordForWeight(for: date, weightEntry: WeightEntry(weight: weight, date: date, note: note))
     }
     
     // 体重記録を更新
@@ -38,7 +38,7 @@ class RecordViewModel: ObservableObject {
         weightDataService.updateWeightEntry(id: id, weight: weight, date: date, note: note)
         
         // DailyRecord も更新
-        updateDailyRecord(for: date, weightEntry: WeightEntry(weight: weight, date: date, note: note))
+        updateDailyRecordForWeight(for: date, weightEntry: WeightEntry(weight: weight, date: date, note: note))
     }
     
     // 体重記録を削除
@@ -48,40 +48,42 @@ class RecordViewModel: ObservableObject {
     
     // 食事記録を追加
     func addFoodEntry(_ foodEntry: FoodEntry) {
-        updateDailyRecord(for: foodEntry.time, foodEntry: foodEntry)
+        updateDailyRecordForFood(for: foodEntry.time, foodEntry: foodEntry)
     }
     
-    // 日別記録を更新
-    private func updateDailyRecord(for date: Date, weightEntry: WeightEntry? = nil, foodEntry: FoodEntry? = nil) {
+    // 日別記録を更新（体重用）
+    private func updateDailyRecordForWeight(for date: Date, weightEntry: WeightEntry) {
         let dayStart = Calendar.current.startOfDay(for: date)
-        
-        // 既存の記録を検索
         if let index = dailyRecords.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: dayStart) }) {
-            if let weightEntry = weightEntry {
-                dailyRecords[index].weightEntry = weightEntry
-            }
-            if let foodEntry = foodEntry {
-                dailyRecords[index].foodEntries.append(foodEntry)
-            }
+            dailyRecords[index].weightEntry = weightEntry
         } else {
-            // 新しい記録を作成
             var newRecord = DailyRecord(date: dayStart)
             newRecord.weightEntry = weightEntry
-            if let foodEntry = foodEntry {
-                newRecord.foodEntries.append(foodEntry)
-            }
             dailyRecords.append(newRecord)
             dailyRecords.sort { $0.date < $1.date }
         }
     }
-    
+
+    // 日別記録を更新（食事用）
+    private func updateDailyRecordForFood(for date: Date, foodEntry: FoodEntry) {
+        let dayStart = Calendar.current.startOfDay(for: date)
+        if let index = dailyRecords.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: dayStart) }) {
+            dailyRecords[index].foodEntries.append(foodEntry)
+        } else {
+            var newRecord = DailyRecord(date: dayStart)
+            newRecord.foodEntries.append(foodEntry)
+            dailyRecords.append(newRecord)
+            dailyRecords.sort { $0.date < $1.date }
+        }
+    }
+
     // Core Dataから体重データを読み込み
     private func loadWeightData() {
         weightDataService.loadWeightEntries()
         
         // DailyRecordsに反映
         for weightEntry in weightEntries {
-            updateDailyRecord(for: weightEntry.date, weightEntry: weightEntry)
+            updateDailyRecordForWeight(for: weightEntry.date, weightEntry: weightEntry)
         }
     }
     
