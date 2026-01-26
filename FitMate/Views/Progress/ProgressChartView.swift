@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ProgressChartView: View {
     @StateObject private var recordViewModel = RecordViewModel()
@@ -83,7 +84,7 @@ struct ProgressSummaryCard: View {
             
             HStack(spacing: 40) {
                 VStack {
-                    Text(String(format: "%.1f", recordViewModel.weightEntries.last?.weight ?? 0))
+                    Text(String(format: "%.1f", recordViewModel.weightEntries.first?.weight ?? 0))
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundColor(.blue)
@@ -305,10 +306,6 @@ struct WeightInputView: View {
         NavigationView {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 15) {
-                    Text("体重記録")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
                     VStack(alignment: .leading, spacing: 8) {
                         Text("体重 (kg)")
                             .font(.headline)
@@ -332,9 +329,7 @@ struct WeightInputView: View {
                     }
                 }
                 .padding()
-                
-                Spacer()
-                
+
                 Button("記録する") {
                     if let weight = Double(weightText) {
                         recordViewModel.addWeightEntry(
@@ -353,6 +348,13 @@ struct WeightInputView: View {
                 .cornerRadius(10)
                 .padding()
             }
+            // 画面のどこかをタップしたらキーボードを閉じる（ボタン操作を邪魔しない）
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            )
             .navigationTitle("体重を記録")
             .navigationBarItems(leading:
                 Button("キャンセル") {
