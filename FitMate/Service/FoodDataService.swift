@@ -5,31 +5,19 @@
 
 import CoreData
 import Combine
-import Foundation
 
 class FoodDataService: ObservableObject {
-    private let container: NSPersistentContainer
-    var context: NSManagedObjectContext { container.viewContext }
-    
-    init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "FitMateModel")
-        if inMemory {
-            let description = NSPersistentStoreDescription()
-            description.type = NSInMemoryStoreType
-            container.persistentStoreDescriptions = [description]
-        }
-        container.loadPersistentStores { _, error in
-            if let error = error {
-                print("Core Data load error: \(error)")
-            }
-        }
+    private let persistenceController = PersistenceController.shared
+    @Published var foodEntries: [FoodEntry] = []
+
+    init() {
+        loadFoodEntries()
     }
-    
-    private func startOfDay(for date: Date) -> Date {
-        Calendar.current.startOfDay(for: date)
-    }
-    
+
+    // 食事記録を保存
     func addFoodEntry(_ foodEntry: FoodEntry) {
+        let context = persistenceController.container.viewContext
+
         let entity = FoodEntryEntity(context: context)
         entity.id = foodEntry.id
         entity.name = foodEntry.name
@@ -38,27 +26,53 @@ class FoodDataService: ObservableObject {
         entity.protein = foodEntry.protein
         entity.fat = foodEntry.fat
         entity.time = foodEntry.time
-        do {
-            try context.save()
-            
-        } catch {
-            context.rollback()
-            print("Failed to save FoodEntry: \(error)")
+
+        // mealType（モデルの属性名に合わせて保存）
+        let attributes = entity.entity.attributesByName
+        if attributes["mealTypeRaw"] != nil {
+            entity.setValue(Int16(foodEntry.mealType.rawValue), forKey: "mealTypeRaw")
+        } else if attributes["mealType"] != nil {
+            entity.setValue(Int16(foodEntry.mealType.rawValue), forKey: "mealType")
+        } else {
+            // 属性が無い場合はクラッシュ回避（モデル側に追加すると保存される）
+            print("[FoodDataService] FoodEntryEntity に mealType 属性がありません。xcdatamodeld に mealTypeRaw(Int16) 等を追加してください")
         }
+
+        persistenceController.save()
+        loadFoodEntries()
     }
-    
+
     // 全ての食事記録を読み込み
     func loadFoodEntries() {
+        let context = persistenceController.container.viewContext
         let request: NSFetchRequest<FoodEntryEntity> = FoodEntryEntity.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \FoodEntryEntity.time, ascending: false)]
-        
+
         do {
             let entities = try context.fetch(request)
-            
-            print("体重記録を読み込みました: 件")
+            foodEntries = entities.map { FoodEntry(from: $0) }
+            print("食事記録を読み込みました: \(foodEntries.count)件")
         } catch {
-            print("体重記録読み込みエラー: \(error)")
-            
+            print("食事記録読み込みエラー: \(error)")
+            foodEntries = []
+        }
+    }
+
+    // 食事記録を削除
+    func deleteFoodEntry(id: UUID) {
+        let context = persistenceController.container.viewContext
+        let request: NSFetchRequest<FoodEntryEntity> = FoodEntryEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+
+        do {
+            let results = try context.fetch(request)
+            if let entity = results.first {
+                context.delete(entity)
+                persistenceController.save()
+                loadFoodEntries()
+            }
+        } catch {
+            print("食事記録削除エラー: \(error)")
         }
     }
 }
