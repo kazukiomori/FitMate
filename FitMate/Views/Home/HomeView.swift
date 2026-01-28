@@ -7,11 +7,27 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var user: User
+    @EnvironmentObject var recordViewModel: RecordViewModel
     @StateObject private var healthKitManager = HealthKitManager()
-    @State private var todayCalories = 0
     @State private var targetCalories = 1800
 
     private let today: Date = Calendar.current.startOfDay(for: Date())
+
+    private var consumedCaloriesToday: Int {
+        recordViewModel.dailyRecords
+            .first { Calendar.current.isDate($0.date, inSameDayAs: today) }?
+            .totalCalories ?? 0
+    }
+
+    private var calorieProgress: Double {
+        guard targetCalories > 0 else { return 0 }
+        return min(Double(consumedCaloriesToday) / Double(targetCalories), 1.0)
+    }
+
+    private var remainingCalories: Int {
+        max(targetCalories - consumedCaloriesToday, 0)
+    }
+
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ja_JP")
@@ -43,7 +59,7 @@ struct HomeView: View {
                                 .frame(width: 150, height: 150)
                             
                             Circle()
-                                .trim(from: 0, to: CGFloat(todayCalories) / CGFloat(targetCalories))
+                                .trim(from: 0, to: CGFloat(calorieProgress))
                                 .stroke(
                                     LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing),
                                     style: StrokeStyle(lineWidth: 15, lineCap: .round)
@@ -52,7 +68,7 @@ struct HomeView: View {
                                 .rotationEffect(.degrees(-90))
                             
                             VStack {
-                                Text("\(todayCalories)")
+                                Text("\(consumedCaloriesToday)")
                                     .font(.title)
                                     .fontWeight(.bold)
                                 Text("/ \(targetCalories)kcal")
@@ -64,7 +80,7 @@ struct HomeView: View {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                             StatCard(
                                 title: "残り",
-                                value: "\(targetCalories - todayCalories)kcal",
+                                value: "\(remainingCalories)kcal",
                                 color: .green
                             )
                             StatCard(

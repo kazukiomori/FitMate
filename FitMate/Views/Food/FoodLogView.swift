@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct FoodLogView: View {
-    @StateObject private var recordViewModel = RecordViewModel()
+    @EnvironmentObject var recordViewModel: RecordViewModel
     @State private var selectedMeal: MealType = .breakfast
     @State private var showingFoodAdd = false
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())

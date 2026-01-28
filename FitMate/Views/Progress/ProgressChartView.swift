@@ -7,7 +7,7 @@ import SwiftUI
 import UIKit
 
 struct ProgressChartView: View {
-    @StateObject private var recordViewModel = RecordViewModel()
+    @EnvironmentObject var recordViewModel: RecordViewModel
     @State private var showingWeightInput = false
     @State private var selectedTimeRange = TimeRange.month
     

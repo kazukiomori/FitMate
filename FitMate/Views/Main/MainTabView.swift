@@ -7,6 +7,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var user: User
+    @StateObject private var recordViewModel = RecordViewModel()
     
     var body: some View {
         TabView {
@@ -35,5 +36,6 @@ struct MainTabView: View {
                 }
         }
         .environmentObject(user)
+        .environmentObject(recordViewModel)
     }
 }
