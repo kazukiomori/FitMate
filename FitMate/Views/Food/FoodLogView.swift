@@ -10,6 +10,8 @@ struct FoodLogView: View {
     @State private var selectedMeal: MealType = .breakfast
     @State private var showingFoodAdd = false
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
+    @State private var pendingDeleteEntry: FoodEntry?
+    @State private var showingDeleteAlert = false
     
     // 選択日の食事データ
     private var entriesForSelectedDate: [FoodEntry] {
@@ -20,41 +22,45 @@ struct FoodLogView: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // カレンダー（月表示）
+            List {
+                Section {
                     MiniMonthCalendar(selectedDate: $selectedDate)
-                        .padding(.horizontal)
-                        .padding(.top)
-                    
-                    // 選択日のカロリー概要
+                        .padding(.vertical, 8)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+
                     DayCaloriesSummary(date: selectedDate, foodEntries: entriesForSelectedDate, weight: nil)
-                    
-                    // 食事タイプ選択
+                        .listRowInsets(EdgeInsets())
+                        .padding(.vertical, 4)
+
                     Picker("食事", selection: $selectedMeal) {
                         ForEach(MealType.allCases, id: \.self) { meal in
                             Text(meal.title).tag(meal)
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                    .padding()
-                    
-                    // 食事リスト（スクロール統合）
-                    LazyVStack(spacing: 0) {
-                        let items = entriesForSelectedDate.filter { $0.mealType == selectedMeal }
-                        ForEach(Array(items.enumerated()), id: \.element.id) { index, entry in
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                }
+
+                Section {
+                    let items = entriesForSelectedDate.filter { $0.mealType == selectedMeal }
+                    if items.isEmpty {
+                        Text("記録がありません")
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(items) { entry in
                             FoodEntryRow(entry: entry)
-                                .padding(.vertical, 8)
-                            if index < items.count - 1 {
-                                Divider()
-                            }
+                        }
+                        .onDelete { indexSet in
+                            guard let index = indexSet.first else { return }
+                            pendingDeleteEntry = items[index]
+                            showingDeleteAlert = true
                         }
                     }
-                    .padding(.horizontal)
-                    
-                    Spacer(minLength: 0)
+                } header: {
+                    Text("\(selectedMeal.title)の記録")
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("食事記録")
             .navigationBarItems(trailing:
                 Button(action: { showingFoodAdd = true }) {
@@ -64,6 +70,23 @@ struct FoodLogView: View {
             )
             .sheet(isPresented: $showingFoodAdd) {
                 FoodAddView(recordViewModel: recordViewModel, selectedMeal: selectedMeal)
+            }
+            .alert("削除しますか？", isPresented: $showingDeleteAlert) {
+                Button("削除", role: .destructive) {
+                    if let entry = pendingDeleteEntry {
+                        recordViewModel.deleteFoodEntry(id: entry.id)
+                    }
+                    pendingDeleteEntry = nil
+                }
+                Button("キャンセル", role: .cancel) {
+                    pendingDeleteEntry = nil
+                }
+            } message: {
+                if let entry = pendingDeleteEntry {
+                    Text("\(entry.name) を削除します")
+                } else {
+                    Text("この記録を削除します")
+                }
             }
         }
     }
