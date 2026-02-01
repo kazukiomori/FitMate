@@ -27,7 +27,7 @@ struct ProfileView: View {
                     }
                     
                     HStack {
-                        Text("現在の体重")
+                        Text("登録時の体重")
                         Spacer()
                         Text("\(String(format: "%.1f", user.currentWeight))kg")
                             .foregroundColor(.gray)
