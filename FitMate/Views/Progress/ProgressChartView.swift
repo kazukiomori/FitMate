@@ -43,7 +43,7 @@ struct ProgressChartView: View {
                     
                     // 体重グラフ
                     WeightChartView(
-                        weightEntries: recordViewModel.getRecentWeightEntries(days: selectedTimeRange.days),
+                        weightEntries: recordViewModel.weightEntries,
                         timeRange: selectedTimeRange
                     )
                     .frame(height: 300)
@@ -126,12 +126,83 @@ struct ProgressSummaryCard: View {
 struct WeightChartView: View {
     let weightEntries: [WeightEntry]
     let timeRange: ProgressChartView.TimeRange
-
-    private var dateFormatter: DateFormatter {
+    
+    private var calendar: Calendar {
+        var cal = Calendar.current
+        cal.locale = Locale(identifier: "ja_JP")
+        // 週の左端を月曜にする
+        cal.firstWeekday = 2
+        cal.minimumDaysInFirstWeek = 1
+        return cal
+    }
+    
+    private var referenceDate: Date {
+        calendar.startOfDay(for: Date())
+    }
+    
+    private func dateSlots() -> [Date] {
+        switch timeRange {
+        case .week:
+            let start = calendar.dateInterval(of: .weekOfYear, for: referenceDate)?.start ?? referenceDate
+            return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+        case .month:
+            let interval = calendar.dateInterval(of: .month, for: referenceDate)
+            let start = interval?.start ?? referenceDate
+            let endExclusive = interval?.end ?? calendar.date(byAdding: .month, value: 1, to: start) ?? start
+            let last = calendar.date(byAdding: .day, value: -1, to: endExclusive) ?? start
+            let days = calendar.dateComponents([.day], from: start, to: last).day ?? 0
+            return (0...max(days, 0)).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+        case .threeMonths:
+            let end = referenceDate
+            let start = calendar.startOfDay(for: calendar.date(byAdding: .month, value: -3, to: end) ?? end)
+            let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+            return (0...max(days, 0)).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+        }
+    }
+    
+    private func latestEntryByDay() -> [Date: WeightEntry] {
+        let grouped = Dictionary(grouping: weightEntries) { entry in
+            calendar.startOfDay(for: entry.date)
+        }
+        return grouped.compactMapValues { entries in
+            entries.max { $0.date < $1.date }
+        }
+    }
+    
+    private func tickIndices(for slots: [Date]) -> [Int] {
+        guard !slots.isEmpty else { return [] }
+        let lastIndex = slots.count - 1
+        
+        switch timeRange {
+        case .week:
+            return Array(0...lastIndex)
+        case .month:
+            // 1日/8日/15日/22日/最終日 を基本に、範囲内に丸める
+            let candidates = [0, 7, 14, 21, lastIndex]
+            return Array(Set(candidates.map { min(max($0, 0), lastIndex) })).sorted()
+        case .threeMonths:
+            var indices: [Int] = [0, lastIndex]
+            for (idx, date) in slots.enumerated() {
+                let day = calendar.component(.day, from: date)
+                if day == 1 { indices.append(idx) }
+            }
+            return Array(Set(indices)).sorted()
+        }
+    }
+    
+    private func label(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ja_JP")
-        formatter.dateFormat = "M/d"
-        return formatter
+        
+        switch timeRange {
+        case .week:
+            formatter.dateFormat = "M/d(EEE)"
+        case .month:
+            formatter.dateFormat = "d"
+        case .threeMonths:
+            formatter.dateFormat = "M/d"
+        }
+        return formatter.string(from: date)
     }
     
     var body: some View {
@@ -140,120 +211,121 @@ struct WeightChartView: View {
                 .font(.headline)
                 .fontWeight(.bold)
             
-            if weightEntries.isEmpty {
-                VStack {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 50))
-                        .foregroundColor(.gray)
-                    Text("データがありません")
-                        .foregroundColor(.gray)
-                    Text("体重を記録してグラフを表示しましょう")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                // カスタム折れ線グラフ
-                let sortedEntries = weightEntries.sorted { $0.date < $1.date }
-
-                VStack(spacing: 6) {
-                    GeometryReader { geometry in
-                        let minWeight = sortedEntries.map { $0.weight }.min() ?? 0
-                        let maxWeight = sortedEntries.map { $0.weight }.max() ?? 100
-                        let weightRange = maxWeight - minWeight
-                        let adjustedRange = weightRange < 2 ? 2 : weightRange // 最小レンジを2kgに
-                        let adjustedMin = minWeight - (adjustedRange - weightRange) / 2
-                        let adjustedMax = maxWeight + (adjustedRange - weightRange) / 2
+            // カスタム折れ線グラフ（指定期間の全日付スロットを作り、未入力日は空白）
+            let slots = dateSlots()
+            let byDay = latestEntryByDay()
+            let weights: [Double?] = slots.map { day in
+                byDay[calendar.startOfDay(for: day)]?.weight
+            }
+            
+            let availableWeights = weights.compactMap { $0 }
+            let minWeight = availableWeights.min() ?? 0
+            let maxWeight = availableWeights.max() ?? 100
+            let weightRange = maxWeight - minWeight
+            let adjustedRange = weightRange < 2 ? 2 : weightRange
+            let adjustedMin = minWeight - (adjustedRange - weightRange) / 2
+            let adjustedMax = maxWeight + (adjustedRange - weightRange) / 2
+            
+            VStack(spacing: 6) {
+                GeometryReader { geometry in
+                    ZStack {
+                        // グリッドライン
+                        VStack {
+                            ForEach(0..<5) { i in
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(height: 1)
+                                if i < 4 { Spacer() }
+                            }
+                        }
                         
-                        ZStack {
-                            // グリッドライン
+                        // 体重数値ラベル
+                        HStack {
                             VStack {
                                 ForEach(0..<5) { i in
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.3))
-                                        .frame(height: 1)
+                                    let weight = adjustedMax - (adjustedMax - adjustedMin) * Double(i) / 4
+                                    Text(String(format: "%.1f", weight))
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
                                     if i < 4 { Spacer() }
                                 }
                             }
+                            .frame(width: 30)
                             
-                            // 体重数値ラベル
-                            HStack {
-                                VStack {
-                                    ForEach(0..<5) { i in
-                                        let weight = adjustedMax - (adjustedMax - adjustedMin) * Double(i) / 4
-                                        Text(String(format: "%.1f", weight))
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                        if i < 4 { Spacer() }
-                                    }
+                            Spacer()
+                        }
+                        
+                        // 折れ線（未入力日は線を切る）
+                        Path { path in
+                            var hasPreviousPoint = false
+                            for index in slots.indices {
+                                guard let weight = weights[index], adjustedMax != adjustedMin else {
+                                    hasPreviousPoint = false
+                                    continue
                                 }
-                                .frame(width: 30)
+                                let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(slots.count - 1, 1))
+                                let y = geometry.size.height * (1 - (weight - adjustedMin) / (adjustedMax - adjustedMin))
                                 
-                                Spacer()
-                            }
-                            
-                            // 折れ線グラフ
-                            Path { path in
-                                for (index, entry) in sortedEntries.enumerated() {
-                                    let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(sortedEntries.count - 1, 1))
-                                    let y = geometry.size.height * (1 - (entry.weight - adjustedMin) / (adjustedMax - adjustedMin))
-                                    
-                                    if index == 0 {
-                                        path.move(to: CGPoint(x: x, y: y))
-                                    } else {
-                                        path.addLine(to: CGPoint(x: x, y: y))
-                                    }
+                                if !hasPreviousPoint {
+                                    path.move(to: CGPoint(x: x, y: y))
+                                    hasPreviousPoint = true
+                                } else {
+                                    path.addLine(to: CGPoint(x: x, y: y))
                                 }
                             }
-                            .stroke(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                            )
-                            
-                            // データポイント
-                            ForEach(Array(sortedEntries.enumerated()), id: \.element.id) { index, entry in
-                                let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(sortedEntries.count - 1, 1))
-                                let y = geometry.size.height * (1 - (entry.weight - adjustedMin) / (adjustedMax - adjustedMin))
-                                
+                        }
+                        .stroke(
+                            LinearGradient(
+                                colors: [.blue, .purple],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        
+                        // データポイント（入力日だけ表示）
+                        ForEach(Array(slots.indices), id: \.self) { index in
+                            if let weight = weights[index], adjustedMax != adjustedMin {
+                                let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(slots.count - 1, 1))
+                                let y = geometry.size.height * (1 - (weight - adjustedMin) / (adjustedMax - adjustedMin))
                                 Circle()
                                     .fill(Color.blue)
                                     .frame(width: 8, height: 8)
                                     .position(x: x, y: y)
                             }
                         }
-                    }
-                    .padding(.leading, 10)
-
-                    // X軸（日付）
-                    if sortedEntries.count == 1 {
-                        Text(dateFormatter.string(from: sortedEntries[0].date))
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.leading, 50)
-                            .padding(.trailing, 10)
-                    } else {
-                        let first = sortedEntries.first!.date
-                        let mid = sortedEntries[sortedEntries.count / 2].date
-                        let last = sortedEntries.last!.date
-
-                        HStack {
-                            Text(dateFormatter.string(from: first))
-                            Spacer()
-                            Text(dateFormatter.string(from: mid))
-                            Spacer()
-                            Text(dateFormatter.string(from: last))
+                        
+                        if availableWeights.isEmpty {
+                            VStack(spacing: 8) {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                    .font(.system(size: 38))
+                                    .foregroundColor(.gray)
+                                Text("データがありません")
+                                    .foregroundColor(.gray)
+                                    .font(.subheadline)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                        .padding(.leading, 50)
-                        .padding(.trailing, 10)
                     }
                 }
+                .padding(.leading, 10)
+                
+                // X軸（日付）
+                GeometryReader { geo in
+                    let ticks = tickIndices(for: slots)
+                    ZStack(alignment: .topLeading) {
+                        ForEach(ticks, id: \.self) { idx in
+                            let x = 40 + (geo.size.width - 40) * Double(idx) / Double(max(slots.count - 1, 1))
+                            Text(label(for: slots[idx]))
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                                .frame(width: 60, alignment: idx == 0 ? .leading : (idx == slots.count - 1 ? .trailing : .center))
+                                .position(x: x, y: 8)
+                        }
+                    }
+                }
+                .frame(height: 16)
+                .padding(.leading, 10)
             }
         }
     }
