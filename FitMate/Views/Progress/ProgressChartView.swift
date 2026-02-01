@@ -126,6 +126,13 @@ struct ProgressSummaryCard: View {
 struct WeightChartView: View {
     let weightEntries: [WeightEntry]
     let timeRange: ProgressChartView.TimeRange
+
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateFormat = "M/d"
+        return formatter
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -147,77 +154,106 @@ struct WeightChartView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // カスタム折れ線グラフ
-                GeometryReader { geometry in
-                    let sortedEntries = weightEntries.sorted { $0.date < $1.date }
-                    let minWeight = sortedEntries.map { $0.weight }.min() ?? 0
-                    let maxWeight = sortedEntries.map { $0.weight }.max() ?? 100
-                    let weightRange = maxWeight - minWeight
-                    let adjustedRange = weightRange < 2 ? 2 : weightRange // 最小レンジを2kgに
-                    let adjustedMin = minWeight - (adjustedRange - weightRange) / 2
-                    let adjustedMax = maxWeight + (adjustedRange - weightRange) / 2
-                    
-                    ZStack {
-                        // グリッドライン
-                        VStack {
-                            ForEach(0..<5) { i in
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(height: 1)
-                                if i < 4 { Spacer() }
-                            }
-                        }
+                let sortedEntries = weightEntries.sorted { $0.date < $1.date }
+
+                VStack(spacing: 6) {
+                    GeometryReader { geometry in
+                        let minWeight = sortedEntries.map { $0.weight }.min() ?? 0
+                        let maxWeight = sortedEntries.map { $0.weight }.max() ?? 100
+                        let weightRange = maxWeight - minWeight
+                        let adjustedRange = weightRange < 2 ? 2 : weightRange // 最小レンジを2kgに
+                        let adjustedMin = minWeight - (adjustedRange - weightRange) / 2
+                        let adjustedMax = maxWeight + (adjustedRange - weightRange) / 2
                         
-                        // 体重数値ラベル
-                        HStack {
+                        ZStack {
+                            // グリッドライン
                             VStack {
                                 ForEach(0..<5) { i in
-                                    let weight = adjustedMax - (adjustedMax - adjustedMin) * Double(i) / 4
-                                    Text(String(format: "%.1f", weight))
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(height: 1)
                                     if i < 4 { Spacer() }
                                 }
                             }
-                            .frame(width: 30)
                             
-                            Spacer()
-                        }
-                        
-                        // 折れ線グラフ
-                        Path { path in
-                            for (index, entry) in sortedEntries.enumerated() {
+                            // 体重数値ラベル
+                            HStack {
+                                VStack {
+                                    ForEach(0..<5) { i in
+                                        let weight = adjustedMax - (adjustedMax - adjustedMin) * Double(i) / 4
+                                        Text(String(format: "%.1f", weight))
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                        if i < 4 { Spacer() }
+                                    }
+                                }
+                                .frame(width: 30)
+                                
+                                Spacer()
+                            }
+                            
+                            // 折れ線グラフ
+                            Path { path in
+                                for (index, entry) in sortedEntries.enumerated() {
+                                    let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(sortedEntries.count - 1, 1))
+                                    let y = geometry.size.height * (1 - (entry.weight - adjustedMin) / (adjustedMax - adjustedMin))
+                                    
+                                    if index == 0 {
+                                        path.move(to: CGPoint(x: x, y: y))
+                                    } else {
+                                        path.addLine(to: CGPoint(x: x, y: y))
+                                    }
+                                }
+                            }
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.blue, .purple],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                            )
+                            
+                            // データポイント
+                            ForEach(Array(sortedEntries.enumerated()), id: \.element.id) { index, entry in
                                 let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(sortedEntries.count - 1, 1))
                                 let y = geometry.size.height * (1 - (entry.weight - adjustedMin) / (adjustedMax - adjustedMin))
                                 
-                                if index == 0 {
-                                    path.move(to: CGPoint(x: x, y: y))
-                                } else {
-                                    path.addLine(to: CGPoint(x: x, y: y))
-                                }
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 8, height: 8)
+                                    .position(x: x, y: y)
                             }
                         }
-                        .stroke(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                        )
-                        
-                        // データポイント
-                        ForEach(Array(sortedEntries.enumerated()), id: \.element.id) { index, entry in
-                            let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(sortedEntries.count - 1, 1))
-                            let y = geometry.size.height * (1 - (entry.weight - adjustedMin) / (adjustedMax - adjustedMin))
-                            
-                            Circle()
-                                .fill(Color.blue)
-                                .frame(width: 8, height: 8)
-                                .position(x: x, y: y)
+                    }
+                    .padding(.leading, 10)
+
+                    // X軸（日付）
+                    if sortedEntries.count == 1 {
+                        Text(dateFormatter.string(from: sortedEntries[0].date))
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.leading, 50)
+                            .padding(.trailing, 10)
+                    } else {
+                        let first = sortedEntries.first!.date
+                        let mid = sortedEntries[sortedEntries.count / 2].date
+                        let last = sortedEntries.last!.date
+
+                        HStack {
+                            Text(dateFormatter.string(from: first))
+                            Spacer()
+                            Text(dateFormatter.string(from: mid))
+                            Spacer()
+                            Text(dateFormatter.string(from: last))
                         }
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                        .padding(.leading, 50)
+                        .padding(.trailing, 10)
                     }
                 }
-                .padding(.leading, 10)
             }
         }
     }
