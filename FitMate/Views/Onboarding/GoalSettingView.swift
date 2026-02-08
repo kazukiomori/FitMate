@@ -19,119 +19,128 @@ struct GoalSettingView: View {
     }
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 30) {
-                // タイトル
-                VStack(spacing: 12) {
-                    Text("目標を設定しましょう")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                    
-                    Text("健康的で実現可能な目標を一緒に作りましょう")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 20)
-                
-                LazyVStack(spacing: 20) {
-                    // 目標体重設定
-                    ModernGoalCard(
-                        icon: "target",
-                        title: "目標体重",
-                        value: String(format: "%.1fkg", user.targetWeight),
-                        subtitle: "現在より \(String(format: "%.1f", user.currentWeight - user.targetWeight))kg の減量"
-                    ) {
-                        VStack(spacing: 15) {
-                            HStack {
-                                Text("40kg")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
-                                Spacer()
-                                Text("120kg")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
-                            }
-                            
-                            Slider(value: $user.targetWeight, in: 40...120, step: 0.1)
-                                .accentColor(.white)
-                        }
-                    }
-                    
-                    // 目標期限設定
-                    ModernGoalCard(
-                        icon: "calendar.badge.clock",
-                        title: "目標達成期限",
-                        value: dateFormatter.string(from: user.targetDate),
-                        subtitle: "目標まで \(daysBetween(start: Date(), end: user.targetDate))日間"
-                    ) {
-                        VStack(spacing: 15) {
-                            HStack(spacing: 10) {
-                                QuickDateButton(title: "1ヶ月", months: 1, user: user)
-                                QuickDateButton(title: "3ヶ月", months: 3, user: user)
-                                QuickDateButton(title: "6ヶ月", months: 6, user: user)
-                            }
-                            
-                            Button("詳細な日付を選択") {
-                                showingDatePicker = true
-                            }
+        ZStack {
+            LinearGradient(
+                colors: [Color.blue, Color.purple, Color.pink],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 30) {
+                    // タイトル
+                    VStack(spacing: 12) {
+                        Text("目標を設定しましょう")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                        
+                        Text("健康的で実現可能な目標を一緒に作りましょう")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.8))
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color.white.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                    )
-                            )
-                        }
+                            .multilineTextAlignment(.center)
                     }
+                    .padding(.top, 20)
                     
-                    // 活動レベル設定
-                    ModernGoalCard(
-                        icon: "figure.run",
-                        title: "活動レベル",
-                        value: user.activityLevel.rawValue,
-                        subtitle: "日常的な運動量"
-                    ) {
-                        VStack(spacing: 12) {
-                            ForEach(ActivityLevel.allCases, id: \.self) { level in
-                                Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        user.activityLevel = level
+                    LazyVStack(spacing: 20) {
+                        // 目標体重設定
+                        ModernGoalCard(
+                            icon: "target",
+                            title: "目標体重",
+                            value: String(format: "%.1fkg", user.targetWeight),
+                            subtitle: "現在より \(String(format: "%.1f", user.currentWeight - user.targetWeight))kg の減量"
+                        ) {
+                            VStack(spacing: 15) {
+                                HStack {
+                                    Text("40kg")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.6))
+                                    Spacer()
+                                    Text("120kg")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+                                
+                                Slider(value: $user.targetWeight, in: 40...120, step: 0.1)
+                                    .accentColor(.white)
+                            }
+                        }
+                        
+                        // 目標期限設定
+                        ModernGoalCard(
+                            icon: "calendar.badge.clock",
+                            title: "目標達成期限",
+                            value: dateFormatter.string(from: user.targetDate),
+                            subtitle: "目標まで \(daysBetween(start: Date(), end: user.targetDate))日間"
+                        ) {
+                            VStack(spacing: 15) {
+                                HStack(spacing: 10) {
+                                    QuickDateButton(title: "1ヶ月", months: 1, user: user)
+                                    QuickDateButton(title: "3ヶ月", months: 3, user: user)
+                                    QuickDateButton(title: "6ヶ月", months: 6, user: user)
+                                }
+                                
+                                Button("詳細な日付を選択") {
+                                    showingDatePicker = true
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.8))
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(Color.white.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+                        
+                        // 活動レベル設定
+                        ModernGoalCard(
+                            icon: "figure.run",
+                            title: "活動レベル",
+                            value: user.activityLevel.rawValue,
+                            subtitle: "日常的な運動量"
+                        ) {
+                            VStack(spacing: 12) {
+                                ForEach(ActivityLevel.allCases, id: \.self) { level in
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            user.activityLevel = level
+                                        }
+                                    }) {
+                                        HStack {
+                                            Image(systemName: user.activityLevel == level ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(user.activityLevel == level ? .white : .white.opacity(0.4))
+                                                .font(.title3)
+                                            
+                                            Text(level.rawValue)
+                                                .font(.subheadline)
+                                                .foregroundColor(.white)
+                                            
+                                            Spacer()
+                                        }
+                                        .padding(.vertical, 8)
                                     }
-                                }) {
-                                    HStack {
-                                        Image(systemName: user.activityLevel == level ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(user.activityLevel == level ? .white : .white.opacity(0.4))
-                                            .font(.title3)
-                                        
-                                        Text(level.rawValue)
-                                            .font(.subheadline)
-                                            .foregroundColor(.white)
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.vertical, 8)
                                 }
                             }
                         }
+                        
+                        // 推奨設定カード
+                        GoalSettingRecommendationCard(user: user)
                     }
+                    .opacity(animateCard ? 1 : 0)
+                    .offset(y: animateCard ? 0 : 50)
+                    .animation(.easeOut(duration: 0.8).delay(0.2), value: animateCard)
                     
-                    // 推奨設定カード
-                    GoalSettingRecommendationCard(user: user)
+                    Spacer(minLength: 100)
                 }
-                .opacity(animateCard ? 1 : 0)
-                .offset(y: animateCard ? 0 : 50)
-                .animation(.easeOut(duration: 0.8).delay(0.2), value: animateCard)
-                
-                Spacer(minLength: 100)
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
         }
         .sheet(isPresented: $showingDatePicker) {
             ModernCalendarPickerView(selectedDate: $user.targetDate, isPresented: $showingDatePicker)
