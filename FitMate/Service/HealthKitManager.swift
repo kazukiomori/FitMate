@@ -11,13 +11,15 @@ class HealthKitManager: ObservableObject {
     
     @Published var stepCount: Int = 0
     @Published var activeEnergyBurned: Double = 0
+    @Published var threeDayAverageActiveEnergyExcludingToday: Double = 0
     @Published var basalEnergyBurned: Double = 0
     @Published var threeDayAverageBasalEnergyExcludingToday: Double = 0
     @Published var isAuthorized: Bool = false
 
     var totalEnergyBurned: Double {
+        let active = threeDayAverageActiveEnergyExcludingToday > 0 ? threeDayAverageActiveEnergyExcludingToday : activeEnergyBurned
         let basal = threeDayAverageBasalEnergyExcludingToday > 0 ? threeDayAverageBasalEnergyExcludingToday : basalEnergyBurned
-        return activeEnergyBurned + basal
+        return active + basal
     }
     
     init() {
@@ -55,6 +57,7 @@ class HealthKitManager: ObservableObject {
         
         fetchStepCount()
         fetchActiveEnergyBurned()
+        fetchThreeDayAverageActiveEnergyExcludingToday()
         fetchBasalEnergyBurned()
         fetchThreeDayAverageBasalEnergyExcludingToday()
     }
@@ -123,6 +126,75 @@ class HealthKitManager: ObservableObject {
         healthStore.execute(query)
     }
 
+    /// 今日を除外した「過去3日分」のアクティブ消費エネルギー平均を取得（0 kcal日は除外）
+    private func fetchThreeDayAverageActiveEnergyExcludingToday() {
+        guard let activeType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) else {
+            DispatchQueue.main.async { [weak self] in self?.threeDayAverageActiveEnergyExcludingToday = 0 }
+            return
+        }
+
+        let calendar = Calendar.current
+        let now = Date()
+        let todayStart = calendar.startOfDay(for: now)
+
+        // 3日前の0時（今日を除外した過去3日分を取得）
+        guard let startDate = calendar.date(byAdding: .day, value: -3, to: todayStart) else {
+            DispatchQueue.main.async { [weak self] in self?.threeDayAverageActiveEnergyExcludingToday = 0 }
+            return
+        }
+
+        // 終了日は「今日の0時」＝今日を除外
+        let endDate = todayStart
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: startDate,
+            end: endDate,
+            options: .strictStartDate
+        )
+
+        var interval = DateComponents()
+        interval.day = 1
+
+        let query = HKStatisticsCollectionQuery(
+            quantityType: activeType,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum,
+            anchorDate: todayStart,
+            intervalComponents: interval
+        )
+
+        query.initialResultsHandler = { [weak self] _, results, error in
+            if let error {
+                DispatchQueue.main.async {
+                    self?.threeDayAverageActiveEnergyExcludingToday = 0
+                }
+                print("Failed to fetch three-day average active energy: \(error.localizedDescription)")
+                return
+            }
+
+            var dailyTotals: [Double] = []
+            results?.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
+                let value = statistics.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
+                if value > 0 {
+                    dailyTotals.append(value)
+                }
+            }
+
+            let average: Double
+            if dailyTotals.isEmpty {
+                average = 0
+            } else {
+                average = dailyTotals.reduce(0, +) / Double(dailyTotals.count)
+            }
+
+            DispatchQueue.main.async {
+                self?.threeDayAverageActiveEnergyExcludingToday = average
+            }
+        }
+
+        healthStore.execute(query)
+    }
+
     // 安静時消費カロリー（Basal Energy）取得
     private func fetchBasalEnergyBurned() {
         guard let basalEnergyType = HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned) else { return }
@@ -166,8 +238,8 @@ class HealthKitManager: ObservableObject {
         let now = Date()
         let todayStart = calendar.startOfDay(for: now)
 
-        // 4日前の0時（3日分取得するため）
-        guard let startDate = calendar.date(byAdding: .day, value: -4, to: todayStart) else {
+        // 3日前の0時（今日を除外した過去3日分を取得）
+        guard let startDate = calendar.date(byAdding: .day, value: -3, to: todayStart) else {
             DispatchQueue.main.async { [weak self] in self?.threeDayAverageBasalEnergyExcludingToday = 0 }
             return
         }
