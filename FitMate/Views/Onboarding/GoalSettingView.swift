@@ -254,7 +254,7 @@ struct GoalSettingRecommendationCard: View {
             Image(systemName: "sparkles")
                 .font(.title2)
                 .foregroundColor(.yellow)
-            Text("AI推奨設定")
+            Text("推奨設定")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(AoiOnboardingTheme.textPrimary)
