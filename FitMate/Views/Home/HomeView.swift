@@ -85,7 +85,7 @@ struct HomeView: View {
                             )
                             StatCard(
                                 title: "消費",
-                                value: "\(Int(healthKitManager.activeEnergyBurned))kcal",
+                                value: "\(Int(healthKitManager.totalEnergyBurned))kcal",
                                 color: .red
                             )
                         }
@@ -206,7 +206,7 @@ struct HealthActivityCard: View {
                                     .font(.title2)
                             }
                             
-                            Text("\(Int(healthKitManager.activeEnergyBurned))")
+                            Text("\(Int(healthKitManager.totalEnergyBurned))")
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .foregroundColor(.red)
@@ -277,7 +277,7 @@ struct HealthActivityCard: View {
     
     private func getActivityLevel() -> (title: String, color: Color) {
         let steps = healthKitManager.stepCount
-        let calories = healthKitManager.activeEnergyBurned
+        let calories = healthKitManager.totalEnergyBurned
         
         if steps >= 10000 || calories >= 400 {
             return ("とても活発", .green)

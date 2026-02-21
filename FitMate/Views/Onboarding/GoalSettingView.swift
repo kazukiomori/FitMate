@@ -216,6 +216,23 @@ struct ModernGoalCard<Content: View>: View {
 
 struct GoalSettingRecommendationCard: View {
     @ObservedObject var user: User
+    @StateObject private var healthKitManager = HealthKitManager()
+
+    private var usesHealthKitEnergy: Bool {
+        healthKitManager.isAuthorized && healthKitManager.totalEnergyBurned > 0
+    }
+
+    private var displayedMaintenanceCalories: Int {
+        if usesHealthKitEnergy {
+            return Int(healthKitManager.totalEnergyBurned.rounded())
+        }
+
+        return user.calculateTDEEMifflinStJeor()
+    }
+
+    private var maintenanceLabel: String {
+        usesHealthKitEnergy ? "消費カロリー（実測）" : "消費カロリー（TDEE）"
+    }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -225,6 +242,9 @@ struct GoalSettingRecommendationCard: View {
         .padding(20)
         .background(backgroundStyle())
         .shadow(color: AoiOnboardingTheme.shadow, radius: 14, x: 0, y: 7)
+        .onAppear {
+            healthKitManager.fetchTodayHealthData()
+        }
     }
 
     // MARK: - Header
@@ -274,11 +294,11 @@ struct GoalSettingRecommendationCard: View {
 
     private func tdeeRow() -> some View {
         HStack {
-            Text("消費カロリー（TDEE）")
+            Text(maintenanceLabel)
                 .font(.subheadline)
                 .foregroundColor(AoiOnboardingTheme.textSecondary)
             Spacer()
-            Text("\(user.calculateTDEEMifflinStJeor())kcal")
+            Text("\(displayedMaintenanceCalories)kcal")
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(AoiOnboardingTheme.textPrimary)
