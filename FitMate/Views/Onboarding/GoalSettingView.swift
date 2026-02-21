@@ -234,6 +234,22 @@ struct GoalSettingRecommendationCard: View {
         usesHealthKitEnergy ? "消費カロリー（実測）" : "消費カロリー（TDEE）"
     }
 
+    private var usesHealthKitBasal: Bool {
+        healthKitManager.isAuthorized && healthKitManager.threeDayAverageBasalEnergyExcludingToday > 0
+    }
+
+    private var basalLabel: String {
+        usesHealthKitBasal ? "基礎代謝（実測）" : "基礎代謝（BMR）"
+    }
+
+    private var displayedBasalCalories: Int {
+        if usesHealthKitBasal {
+            return Int(healthKitManager.threeDayAverageBasalEnergyExcludingToday.rounded())
+        }
+
+        return user.calculateBMRMifflinStJeor()
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             headerView()
@@ -281,11 +297,11 @@ struct GoalSettingRecommendationCard: View {
 
     private func bmrRow() -> some View {
         HStack {
-            Text("基礎代謝（BMR）")
+            Text(basalLabel)
                 .font(.subheadline)
                 .foregroundColor(AoiOnboardingTheme.textSecondary)
             Spacer()
-            Text("\(user.calculateBMRMifflinStJeor())kcal")
+            Text("\(displayedBasalCalories)kcal")
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(AoiOnboardingTheme.textPrimary)

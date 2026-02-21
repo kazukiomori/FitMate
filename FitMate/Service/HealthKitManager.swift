@@ -143,7 +143,7 @@ class HealthKitManager: ObservableObject {
             return
         }
 
-        // 終了日は「今日の0時」＝今日を除外
+        // 終了日は「今日の0時」＝今日を除外（この endDate 以降のバケットは除外する）
         let endDate = todayStart
 
         let predicate = HKQuery.predicateForSamples(
@@ -172,19 +172,29 @@ class HealthKitManager: ObservableObject {
                 return
             }
 
-            var dailyTotals: [Double] = []
+            var dailyTotals: [(date: Date, value: Double)] = []
             results?.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
+                // enumerateStatistics の to: は境界を含む挙動になることがあり、
+                // 「今日0時」開始のバケットが紛れ込むことがあるため明示的に除外
+                guard statistics.startDate < endDate else { return }
+
                 let value = statistics.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
                 if value > 0 {
-                    dailyTotals.append(value)
+                    dailyTotals.append((statistics.startDate, value))
                 }
             }
 
+            // 念のため日付で並べて「直近3日」だけに制限
+            let recentThreeValues = dailyTotals
+                .sorted { $0.date > $1.date }
+                .prefix(3)
+                .map { $0.value }
+
             let average: Double
-            if dailyTotals.isEmpty {
+            if recentThreeValues.isEmpty {
                 average = 0
             } else {
-                average = dailyTotals.reduce(0, +) / Double(dailyTotals.count)
+                average = recentThreeValues.reduce(0, +) / Double(recentThreeValues.count)
             }
 
             DispatchQueue.main.async {
@@ -244,7 +254,7 @@ class HealthKitManager: ObservableObject {
             return
         }
 
-        // 終了日は「今日の0時」＝今日を除外
+        // 終了日は「今日の0時」＝今日を除外（この endDate 以降のバケットは除外する）
         let endDate = todayStart
 
         let predicate = HKQuery.predicateForSamples(
@@ -273,26 +283,35 @@ class HealthKitManager: ObservableObject {
                 return
             }
 
-            var dailyTotals: [Double] = []
+            var dailyTotals: [(date: Date, value: Double)] = []
             results?.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
+                // enumerateStatistics の to: は境界を含む挙動になることがあり、
+                // 「今日0時」開始のバケットが紛れ込むことがあるため明示的に除外
+                guard statistics.startDate < endDate else { return }
+
                 let value = statistics.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
                 if value > 0 {
-                    dailyTotals.append(value)
+                    dailyTotals.append((statistics.startDate, value))
                 }
             }
 
+            // 念のため日付で並べて「直近3日」だけに制限
+            let recentThreeValues = dailyTotals
+                .sorted { $0.date > $1.date }
+                .prefix(3)
+                .map { $0.value }
+
             let average: Double
-            if dailyTotals.isEmpty {
+            if recentThreeValues.isEmpty {
                 average = 0
             } else {
-                average = dailyTotals.reduce(0, +) / Double(dailyTotals.count)
+                average = recentThreeValues.reduce(0, +) / Double(recentThreeValues.count)
             }
 
             DispatchQueue.main.async {
                 self?.threeDayAverageBasalEnergyExcludingToday = average
             }
         }
-
         healthStore.execute(query)
     }
     
