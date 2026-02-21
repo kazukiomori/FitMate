@@ -11,19 +11,12 @@ struct ProfileSetupView: View {
     
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 30) {
-                // タイトル
-                VStack(spacing: 12) {
-                    Text("あなたについて教えてください")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                    
-                    Text("最適なプランを作成するために")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                .padding(.top, 20)
+            VStack(spacing: 26) {
+                OnboardingHeader(
+                    title: "まずは、ざっくりでOK",
+                    subtitle: "迷ったら直感で。\nあとでいつでも変えられます。"
+                )
+                OnboardingHintPill(text: "ここは“正解”じゃなくて大丈夫")
                 
                 // 設定カード
                 LazyVStack(spacing: 20) {
@@ -37,11 +30,11 @@ struct ProfileSetupView: View {
                             HStack {
                                 Text("18歳")
                                     .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(AoiOnboardingTheme.textSecondary)
                                 Spacer()
                                 Text("80歳")
                                     .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(AoiOnboardingTheme.textSecondary)
                             }
                             
                             Slider(
@@ -52,7 +45,7 @@ struct ProfileSetupView: View {
                                 in: 18...80,
                                 step: 1
                             )
-                            .accentColor(.white)
+                            .tint(AoiOnboardingTheme.accent)
                         }
                     }
                     
@@ -68,6 +61,7 @@ struct ProfileSetupView: View {
                             }
                         }
                         .pickerStyle(SegmentedPickerStyle())
+                        .tint(AoiOnboardingTheme.accent)
                     }
                     
                     // 身長設定
@@ -80,15 +74,15 @@ struct ProfileSetupView: View {
                             HStack {
                                 Text("140cm")
                                     .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(AoiOnboardingTheme.textSecondary)
                                 Spacer()
                                 Text("200cm")
                                     .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(AoiOnboardingTheme.textSecondary)
                             }
                             
                             Slider(value: $user.height, in: 140...200, step: 1)
-                                .accentColor(.white)
+                                .tint(AoiOnboardingTheme.accent)
                         }
                     }
                     
@@ -102,15 +96,15 @@ struct ProfileSetupView: View {
                             HStack {
                                 Text("40kg")
                                     .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(AoiOnboardingTheme.textSecondary)
                                 Spacer()
                                 Text("120kg")
                                     .font(.caption)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(AoiOnboardingTheme.textSecondary)
                             }
                             
                             Slider(value: $user.currentWeight, in: 40...120, step: 0.1)
-                                .accentColor(.white)
+                                .tint(AoiOnboardingTheme.accent)
                         }
                     }
                 }
@@ -120,7 +114,7 @@ struct ProfileSetupView: View {
                 
                 Spacer(minLength: 100)
             }
-            .padding(.horizontal, 20)
+            .onboardingPagePadding()
         }
         .onAppear {
             animateCard = true
@@ -154,23 +148,23 @@ struct ModernSettingCard<Content: View>: View {
                 HStack(spacing: 15) {
                     Image(systemName: icon)
                         .font(.title2)
-                        .foregroundColor(.white)
+                        .foregroundColor(AoiOnboardingTheme.accent)
                         .frame(width: 30)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(title)
                             .font(.headline)
-                            .foregroundColor(.white)
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
                         Text(value)
                             .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(AoiOnboardingTheme.textSecondary)
                     }
                     
                     Spacer()
                     
                     Image(systemName: "chevron.down")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                         .animation(.easeInOut(duration: 0.3), value: isExpanded)
                 }
@@ -192,21 +186,12 @@ struct ModernSettingCard<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.2),
-                            Color.white.opacity(0.1)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AoiOnboardingTheme.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        .stroke(AoiOnboardingTheme.border, lineWidth: 1)
                 )
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .shadow(color: AoiOnboardingTheme.shadow, radius: 12, x: 0, y: 6)
     }
 }

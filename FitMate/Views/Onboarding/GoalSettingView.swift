@@ -9,6 +9,12 @@ struct GoalSettingView: View {
     @EnvironmentObject var user: User
     @State private var showingDatePicker = false
     @State private var animateCard = false
+
+    private let showsBackground: Bool
+
+    init(showsBackground: Bool = true) {
+        self.showsBackground = showsBackground
+    }
     
     // 日本語の日付フォーマッター
     private var dateFormatter: DateFormatter {
@@ -20,25 +26,23 @@ struct GoalSettingView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.blue, Color.purple, Color.pink],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            if showsBackground {
+                AoiOnboardingTheme.background
+                    .ignoresSafeArea()
+            }
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 30) {
                     // タイトル
                     VStack(spacing: 12) {
-                        Text("目標を設定しましょう")
+                        Text("目標は、ゆるめでOK")
                             .font(.title)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
                         
-                        Text("健康的で実現可能な目標を一緒に作りましょう")
+                        Text("まずは“続けられそう”を選ぼう。\nあとでいつでも調整できます。")
                             .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(AoiOnboardingTheme.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, 20)
@@ -55,15 +59,15 @@ struct GoalSettingView: View {
                                 HStack {
                                     Text("40kg")
                                         .font(.caption)
-                                        .foregroundColor(.white.opacity(0.6))
+                                        .foregroundColor(AoiOnboardingTheme.textSecondary)
                                     Spacer()
                                     Text("120kg")
                                         .font(.caption)
-                                        .foregroundColor(.white.opacity(0.6))
+                                        .foregroundColor(AoiOnboardingTheme.textSecondary)
                                 }
                                 
                                 Slider(value: $user.targetWeight, in: 40...120, step: 0.1)
-                                    .accentColor(.white)
+                                    .tint(AoiOnboardingTheme.accent)
                             }
                         }
                         
@@ -85,15 +89,15 @@ struct GoalSettingView: View {
                                     showingDatePicker = true
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.8))
+                                .foregroundColor(AoiOnboardingTheme.textPrimary)
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 20)
-                                        .fill(Color.white.opacity(0.1))
+                                        .fill(AoiOnboardingTheme.accentSoft)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 20)
-                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                                .stroke(AoiOnboardingTheme.border, lineWidth: 1)
                                         )
                                 )
                             }
@@ -115,12 +119,12 @@ struct GoalSettingView: View {
                                     }) {
                                         HStack {
                                             Image(systemName: user.activityLevel == level ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(user.activityLevel == level ? .white : .white.opacity(0.4))
+                                                .foregroundColor(user.activityLevel == level ? AoiOnboardingTheme.accent : AoiOnboardingTheme.textSecondary)
                                                 .font(.title3)
                                             
                                             Text(level.rawValue)
                                                 .font(.subheadline)
-                                                .foregroundColor(.white)
+                                                .foregroundColor(AoiOnboardingTheme.textPrimary)
                                             
                                             Spacer()
                                         }
@@ -184,32 +188,32 @@ struct ModernGoalCard<Content: View>: View {
                 HStack(spacing: 15) {
                     ZStack {
                         Circle()
-                            .fill(Color.white.opacity(0.2))
+                            .fill(AoiOnboardingTheme.accentSoft)
                             .frame(width: 45, height: 45)
                         
                         Image(systemName: icon)
                             .font(.title2)
-                            .foregroundColor(.white)
+                            .foregroundColor(AoiOnboardingTheme.accent)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(title)
                             .font(.headline)
-                            .foregroundColor(.white)
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
                         Text(value)
                             .font(.title3)
                             .fontWeight(.semibold)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
                         Text(subtitle)
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(AoiOnboardingTheme.textSecondary)
                     }
                     
                     Spacer()
                     
                     Image(systemName: "chevron.down")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                         .animation(.easeInOut(duration: 0.3), value: isExpanded)
                 }
@@ -231,22 +235,13 @@ struct ModernGoalCard<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.25),
-                            Color.white.opacity(0.1)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AoiOnboardingTheme.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 18)
-                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        .stroke(AoiOnboardingTheme.border, lineWidth: 1)
                 )
         )
-        .shadow(color: Color.black.opacity(0.15), radius: 15, x: 0, y: 8)
+        .shadow(color: AoiOnboardingTheme.shadow, radius: 16, x: 0, y: 8)
     }
 }
 
@@ -260,7 +255,7 @@ struct GoalSettingRecommendationCard: View {
         }
         .padding(20)
         .background(backgroundStyle())
-        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .shadow(color: AoiOnboardingTheme.shadow, radius: 14, x: 0, y: 7)
     }
 
     // MARK: - Header
@@ -273,7 +268,7 @@ struct GoalSettingRecommendationCard: View {
             Text("AI推奨設定")
                 .font(.headline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
             Spacer()
         }
     }
@@ -297,12 +292,12 @@ struct GoalSettingRecommendationCard: View {
         HStack {
             Text("1日の目標カロリー")
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AoiOnboardingTheme.textSecondary)
             Spacer()
             Text("\(user.calculateDailyCalories())kcal")
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
         }
     }
 
@@ -310,7 +305,7 @@ struct GoalSettingRecommendationCard: View {
         HStack {
             Text("週の減量目標")
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AoiOnboardingTheme.textSecondary)
             Spacer()
             Text("\(String(format: "%.1f", user.calculateWeeklyWeightLoss()))kg")
                 .font(.subheadline)
@@ -329,12 +324,12 @@ struct GoalSettingRecommendationCard: View {
                 Text("健康的なペースについて")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(AoiOnboardingTheme.textPrimary)
             }
 
             Text("週1kg以上の減量は健康に良くありません。より長期的な目標期間をお勧めします。")
                 .font(.caption)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(AoiOnboardingTheme.textSecondary)
 
             Button("推奨期間に変更") {
                 let recommendedDays = Int((user.currentWeight - user.targetWeight) * 7)
@@ -381,19 +376,10 @@ struct GoalSettingRecommendationCard: View {
 
     private func backgroundStyle() -> some View {
         RoundedRectangle(cornerRadius: 18)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.15),
-                        Color.white.opacity(0.05)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(AoiOnboardingTheme.cardBackground)
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    .stroke(AoiOnboardingTheme.border, lineWidth: 1)
             )
     }
 }
@@ -411,15 +397,15 @@ struct QuickDateButton: View {
         }
         .font(.caption)
         .fontWeight(.medium)
-        .foregroundColor(.white)
+        .foregroundColor(AoiOnboardingTheme.accent)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.2))
+                .fill(AoiOnboardingTheme.accentSoft)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        .stroke(AoiOnboardingTheme.border, lineWidth: 1)
                 )
         )
     }
@@ -445,13 +431,8 @@ struct ModernCalendarPickerView: View {
     
     var body: some View {
         ZStack {
-            // グラデーション背景
-            LinearGradient(
-                colors: [Color.blue, Color.purple, Color.pink],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            AoiOnboardingTheme.background
+                .ignoresSafeArea()
             
             VStack(spacing: 25) {
                 // ヘッダー
@@ -460,14 +441,14 @@ struct ModernCalendarPickerView: View {
                         isPresented = false
                     }
                     .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(AoiOnboardingTheme.textSecondary)
                     
                     Spacer()
                     
                     Text("目標達成日を選択")
                         .font(.headline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(AoiOnboardingTheme.textPrimary)
                     
                     Spacer()
                     
@@ -476,7 +457,7 @@ struct ModernCalendarPickerView: View {
                     }
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(AoiOnboardingTheme.accent)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -486,12 +467,12 @@ struct ModernCalendarPickerView: View {
                     Text(selectedDate, formatter: DateFormatter.japaneseDate)
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(AoiOnboardingTheme.textPrimary)
                     
                     if daysFromToday > 0 {
                         Text("今日から\(daysFromToday)日後")
                             .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(AoiOnboardingTheme.textSecondary)
                     } else if daysFromToday == 0 {
                         Text("今日")
                             .font(.subheadline)
@@ -501,10 +482,10 @@ struct ModernCalendarPickerView: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 15)
-                        .fill(Color.white.opacity(0.15))
+                        .fill(AoiOnboardingTheme.cardBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: 15)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                .stroke(AoiOnboardingTheme.border, lineWidth: 1)
                         )
                 )
                 .padding(.horizontal, 20)
@@ -514,7 +495,7 @@ struct ModernCalendarPickerView: View {
                     Button(action: previousMonth) {
                         Image(systemName: "chevron.left")
                             .font(.title2)
-                            .foregroundColor(.white)
+                            .foregroundColor(AoiOnboardingTheme.accent)
                     }
                     
                     Spacer()
@@ -522,14 +503,14 @@ struct ModernCalendarPickerView: View {
                     Text(monthFormatter.string(from: displayedDate))
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(AoiOnboardingTheme.textPrimary)
                     
                     Spacer()
                     
                     Button(action: nextMonth) {
                         Image(systemName: "chevron.right")
                             .font(.title2)
-                            .foregroundColor(.white)
+                            .foregroundColor(AoiOnboardingTheme.accent)
                     }
                 }
                 .padding(.horizontal, 30)
@@ -542,7 +523,7 @@ struct ModernCalendarPickerView: View {
                             Text(weekday)
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white.opacity(0.7))
+                                .foregroundColor(AoiOnboardingTheme.textSecondary)
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -641,7 +622,7 @@ struct ModernCalendarDayView: View {
                 .clipShape(Circle())
                 .overlay(
                     Circle()
-                        .stroke(isSelected ? Color.white : Color.clear, lineWidth: 2)
+                        .stroke(isSelected ? AoiOnboardingTheme.accent : Color.clear, lineWidth: 2)
                 )
         }
         .disabled(isPastDate)
@@ -651,23 +632,23 @@ struct ModernCalendarDayView: View {
     
     private var foregroundColor: Color {
         if isPastDate {
-            return .white.opacity(0.3)
+            return AoiOnboardingTheme.textSecondary.opacity(0.5)
         } else if isSelected {
-            return .white
+            return AoiOnboardingTheme.textPrimary
         } else if isToday {
-            return .yellow
+            return AoiOnboardingTheme.accent
         } else if isInCurrentMonth {
-            return .white.opacity(0.8)
+            return AoiOnboardingTheme.textPrimary
         } else {
-            return .white.opacity(0.4)
+            return AoiOnboardingTheme.textSecondary.opacity(0.7)
         }
     }
     
     private var backgroundColor: Color {
         if isSelected {
-            return Color.white.opacity(0.3)
+            return AoiOnboardingTheme.accentSoft
         } else if isToday {
-            return Color.yellow.opacity(0.2)
+            return AoiOnboardingTheme.accentSoft.opacity(0.6)
         } else {
             return .clear
         }

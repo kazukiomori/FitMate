@@ -11,11 +11,17 @@ struct OnboardingView: View {
     @State private var currentStep = 0
     @State private var offset: CGFloat = 0
     private let totalSteps = 4
+
+    private let stepTitles = [
+        "ようこそ",
+        "あなたのこと",
+        "目標（ゆるめでOK）",
+        "できること"
+    ]
     
     var body: some View {
         ZStack {
-            // 動的グラデーション背景
-            AnimatedGradientBackground(currentStep: currentStep)
+            AoiOnboardingTheme.background
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -24,16 +30,23 @@ struct OnboardingView: View {
                     HStack {
                         ForEach(0..<totalSteps, id: \.self) { index in
                             Capsule()
-                                .fill(index <= currentStep ? Color.white : Color.white.opacity(0.3))
-                                .frame(height: 6)
+                                .fill(index <= currentStep ? AoiOnboardingTheme.accent : AoiOnboardingTheme.border)
+                                .frame(height: 7)
                                 .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentStep)
                         }
                     }
                     .padding(.horizontal, 40)
-                    
-                    Text("\(currentStep + 1) / \(totalSteps)")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
+
+                    VStack(spacing: 4) {
+                        Text(stepTitles[currentStep])
+                            .font(.footnote)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+                        Text("あと\(max(totalSteps - (currentStep + 1), 0))つ")
+                            .font(.caption)
+                            .foregroundColor(AoiOnboardingTheme.textSecondary)
+                    }
                 }
                 .padding(.top, 20)
                 
@@ -43,7 +56,7 @@ struct OnboardingView: View {
                         .tag(0)
                     ProfileSetupView()
                         .tag(1)
-                    GoalSettingView()
+                    GoalSettingView(showsBackground: false)
                         .tag(2)
                     FeatureIntroView()
                         .tag(3)
@@ -59,7 +72,7 @@ struct OnboardingView: View {
                                 currentStep -= 1
                             }
                         }
-                        .buttonStyle(SecondaryGlassButtonStyle())
+                        .buttonStyle(AoiSecondaryButtonStyle())
                         .frame(maxWidth: .infinity)
                     } else {
                         // Invisible dummy to keep button widths equal
@@ -78,7 +91,7 @@ struct OnboardingView: View {
                             }
                         }
                     }
-                    .buttonStyle(PrimaryGlassButtonStyle())
+                    .buttonStyle(AoiPrimaryButtonStyle())
                     .frame(maxWidth: .infinity)
                 }
                 .frame(height: 56) // ボタン高さを揃える
