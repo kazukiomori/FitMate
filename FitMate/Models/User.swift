@@ -19,6 +19,38 @@ class User: ObservableObject {
     // パーソナルトレーナー関連
     @Published var personalTrainer: PersonalTrainer?
     @Published var hasCompletedTrainerSetup: Bool = false
+
+    // MARK: - Calories (Mifflin-St Jeor)
+
+    /// BMR（基礎代謝）: Mifflin-St Jeor式
+    /// - 男性: 10W + 6.25H - 5A + 5
+    /// - 女性: 10W + 6.25H - 5A - 161
+    /// - W: kg, H: cm, A: years
+    func calculateBMRMifflinStJeor() -> Int {
+        let weight = currentWeight
+        let heightCm = height
+        let ageYears = Double(age)
+
+        let base = (10.0 * weight) + (6.25 * heightCm) - (5.0 * ageYears)
+        let sexConstant: Double = (gender == .male) ? 5.0 : -161.0
+        return Int((base + sexConstant).rounded())
+    }
+
+    /// TDEE（総消費カロリー）: BMR × 活動係数
+    /// - 少なめ: 1.25 / 普通: 1.50 / 活発: 1.75
+    func calculateTDEEMifflinStJeor() -> Int {
+        let bmr = Double(calculateBMRMifflinStJeor())
+        return Int((bmr * activityFactor).rounded())
+    }
+
+    /// 活動係数（TDEE用）
+    var activityFactor: Double {
+        switch activityLevel {
+        case .low: return 1.25
+        case .moderate: return 1.50
+        case .high: return 1.75
+        }
+    }
     
     func calculateDailyCalories() -> Int {
         // 簡易的なBMR計算（Harris-Benedict式）

@@ -246,6 +246,8 @@ struct GoalSettingRecommendationCard: View {
 
     private func contentView() -> some View {
         VStack(spacing: 15) {
+            bmrRow()
+            tdeeRow()
             calorieRow()
             weeklyGoalRow()
 
@@ -254,6 +256,32 @@ struct GoalSettingRecommendationCard: View {
             } else {
                 realisticGoalConfirmation()
             }
+        }
+    }
+
+    private func bmrRow() -> some View {
+        HStack {
+            Text("基礎代謝（BMR）")
+                .font(.subheadline)
+                .foregroundColor(AoiOnboardingTheme.textSecondary)
+            Spacer()
+            Text("\(user.calculateBMRMifflinStJeor())kcal")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
+        }
+    }
+
+    private func tdeeRow() -> some View {
+        HStack {
+            Text("消費カロリー（TDEE）")
+                .font(.subheadline)
+                .foregroundColor(AoiOnboardingTheme.textSecondary)
+            Spacer()
+            Text("\(user.calculateTDEEMifflinStJeor())kcal")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
         }
     }
 
