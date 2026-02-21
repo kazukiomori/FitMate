@@ -17,54 +17,54 @@ struct FeatureIntroView: View {
     ]
     
     var body: some View {
-        VStack(spacing: 40) {
-            OnboardingHeader(
-                title: "できることは、これだけ",
-                subtitle: "難しい操作はありません。\n写真や歩数は、できるだけ自動で。",
-                footnote: "完璧じゃなくてOK。続いた日がえらい"
-            )
-            
-            // フィーチャーグリッド
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 15),
-                GridItem(.flexible(), spacing: 15)
-            ], spacing: 20) {
-                ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
-                    ModernFeatureCard(
-                        feature: feature,
-                        delay: Double(index) * 0.1
-                    )
-                    .opacity(animateFeatures ? 1 : 0)
-                    .offset(y: animateFeatures ? 0 : 30)
-                    .animation(.easeOut(duration: 0.8).delay(Double(index) * 0.1), value: animateFeatures)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 26) {
+                OnboardingHeader(
+                    title: "できることは、これだけ",
+                    subtitle: "難しい操作はありません。\n写真や歩数は、できるだけ自動で。",
+                    footnote: "完璧じゃなくてOK。続いた日がえらい"
+                )
+
+                // フィーチャーグリッド
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 15),
+                    GridItem(.flexible(), spacing: 15)
+                ], spacing: 20) {
+                    ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
+                        ModernFeatureCard(
+                            feature: feature,
+                            delay: Double(index) * 0.1
+                        )
+                        .opacity(animateFeatures ? 1 : 0)
+                        .offset(y: animateFeatures ? 0 : 30)
+                        .animation(.easeOut(duration: 0.8).delay(Double(index) * 0.1), value: animateFeatures)
+                    }
                 }
+
+                // 開始準備完了メッセージ
+                VStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.green)
+
+                        Text("準備できたよ")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
+                    }
+
+                    Text("今日の“できた”を、ひとつ増やそう")
+                        .font(.subheadline)
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .opacity(animateFeatures ? 1 : 0)
+                .animation(.easeOut(duration: 0.8).delay(0.6), value: animateFeatures)
+
+                Spacer(minLength: 120)
             }
             .onboardingPagePadding()
-            
-            Spacer()
-            
-            // 開始準備完了メッセージ
-            VStack(spacing: 15) {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.green)
-                    
-                    Text("準備できたよ")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AoiOnboardingTheme.textPrimary)
-                }
-                
-                Text("今日の“できた”を、ひとつ増やそう")
-                    .font(.subheadline)
-                    .foregroundColor(AoiOnboardingTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .opacity(animateFeatures ? 1 : 0)
-            .animation(.easeOut(duration: 0.8).delay(0.6), value: animateFeatures)
-            
-            Spacer()
         }
         .onAppear {
             animateFeatures = true

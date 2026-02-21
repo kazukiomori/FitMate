@@ -43,9 +43,16 @@ struct OnboardingView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(AoiOnboardingTheme.textPrimary)
 
-                        Text("あと\(max(totalSteps - (currentStep + 1), 0))つ")
-                            .font(.caption)
-                            .foregroundColor(AoiOnboardingTheme.textSecondary)
+                        let remaining = max(totalSteps - (currentStep + 1), 0)
+                        if remaining > 0 {
+                            Text("あと\(remaining)つ")
+                                .font(.caption)
+                                .foregroundColor(AoiOnboardingTheme.textSecondary)
+                        } else {
+                            Text("ラスト")
+                                .font(.caption)
+                                .foregroundColor(AoiOnboardingTheme.textSecondary)
+                        }
                     }
                 }
                 .padding(.top, 20)
