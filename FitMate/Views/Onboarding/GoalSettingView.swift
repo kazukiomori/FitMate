@@ -311,7 +311,7 @@ struct GoalSettingRecommendationCard: View {
                 .font(.subheadline)
                 .foregroundColor(AoiOnboardingTheme.textSecondary)
             Spacer()
-            Text("\(user.calculateDailyCalories())kcal")
+            Text("\(user.calculateDailyCalories(maintenanceCalories: displayedMaintenanceCalories))kcal")
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(AoiOnboardingTheme.textPrimary)
@@ -349,7 +349,7 @@ struct GoalSettingRecommendationCard: View {
                 .foregroundColor(AoiOnboardingTheme.textSecondary)
 
             Button("推奨期間に変更") {
-                let recommendedDays = Int((user.currentWeight - user.targetWeight) * 7)
+                let recommendedDays = Int(max(user.currentWeight - user.targetWeight, 0) * 7)
                 user.targetDate = Calendar.current.date(byAdding: .day, value: max(recommendedDays, 28), to: Date()) ?? user.targetDate
             }
             .font(.caption)

@@ -52,32 +52,40 @@ class User: ObservableObject {
         }
     }
     
-    func calculateDailyCalories() -> Int {
-        // 簡易的なBMR計算（Harris-Benedict式）
-        let bmr: Double
-        if gender == .male {
-            bmr = 88.362 + (13.397 * currentWeight) + (4.799 * height) - (5.677 * Double(age))
-        } else {
-            bmr = 447.593 + (9.247 * currentWeight) + (3.098 * height) - (4.330 * Double(age))
+    func calculateDailyCalories(maintenanceCalories: Int) -> Int {
+        // (現在体重 - 目標体重) * 7700kcal を総赤字として、期限までの日数で割り、
+        // その1日赤字分を「維持カロリー（実測/推定）」から差し引いて目標摂取カロリーを出す
+        let maintenance = Double(maintenanceCalories)
+
+        let weightToLoseKg = max(currentWeight - targetWeight, 0)
+        guard weightToLoseKg > 0 else {
+            return Int(maintenance.rounded())
         }
-        
-        let activityMultiplier: Double
-        switch activityLevel {
-        case .low: activityMultiplier = 1.2
-        case .moderate: activityMultiplier = 1.55
-        case .high: activityMultiplier = 1.9
-        }
-        
-        // ダイエット用に500kcal減らす
-        return Int(bmr * activityMultiplier - 500)
+
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date())
+        let end = calendar.startOfDay(for: targetDate)
+        let daysRemaining = max(calendar.dateComponents([.day], from: start, to: end).day ?? 0, 1)
+
+        let totalDeficitKcal = weightToLoseKg * 7700.0
+        let dailyDeficitKcal = totalDeficitKcal / Double(daysRemaining)
+
+        let targetIntake = max(maintenance - dailyDeficitKcal, 0)
+        return Int(targetIntake.rounded())
     }
     
     func calculateWeeklyWeightLoss() -> Double {
-        let weightDifference = currentWeight - targetWeight
-        let daysDifference = Calendar.current.dateComponents([.day], from: Date(), to: targetDate).day ?? 84
-        let weeksDifference = max(Double(daysDifference) / 7.0, 1.0) // 最低1週間
-        
-        return min(weightDifference / weeksDifference, 1.0) // 最大週1kg制限
+        let weightToLoseKg = max(currentWeight - targetWeight, 0)
+        guard weightToLoseKg > 0 else {
+            return 0
+        }
+
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date())
+        let end = calendar.startOfDay(for: targetDate)
+        let daysRemaining = max(calendar.dateComponents([.day], from: start, to: end).day ?? 0, 1)
+
+        return weightToLoseKg * 7.0 / Double(daysRemaining)
     }
     
     func isGoalRealistic() -> Bool {
