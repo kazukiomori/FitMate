@@ -107,6 +107,37 @@ struct ProfileSetupView: View {
                                 .tint(AoiOnboardingTheme.accent)
                         }
                     }
+
+                    // 活動レベル設定
+                    ModernSettingCard(
+                        icon: "figure.run",
+                        title: "活動レベル",
+                        value: user.activityLevel.rawValue
+                    ) {
+                        VStack(spacing: 12) {
+                            ForEach(ActivityLevel.allCases, id: \.self) { level in
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        user.activityLevel = level
+                                    }
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: user.activityLevel == level ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(user.activityLevel == level ? AoiOnboardingTheme.accent : AoiOnboardingTheme.textSecondary)
+                                            .font(.title3)
+
+                                        Text(level.rawValue)
+                                            .font(.subheadline)
+                                            .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+                                        Spacer(minLength: 0)
+                                    }
+                                    .padding(.vertical, 8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
                 }
                 .opacity(animateCard ? 1 : 0)
                 .offset(y: animateCard ? 0 : 50)

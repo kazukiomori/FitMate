@@ -103,37 +103,6 @@ struct GoalSettingView: View {
                             }
                         }
                         
-                        // 活動レベル設定
-                        ModernGoalCard(
-                            icon: "figure.run",
-                            title: "活動レベル",
-                            value: user.activityLevel.rawValue,
-                            subtitle: "日常的な運動量"
-                        ) {
-                            VStack(spacing: 12) {
-                                ForEach(ActivityLevel.allCases, id: \.self) { level in
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            user.activityLevel = level
-                                        }
-                                    }) {
-                                        HStack {
-                                            Image(systemName: user.activityLevel == level ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(user.activityLevel == level ? AoiOnboardingTheme.accent : AoiOnboardingTheme.textSecondary)
-                                                .font(.title3)
-                                            
-                                            Text(level.rawValue)
-                                                .font(.subheadline)
-                                                .foregroundColor(AoiOnboardingTheme.textPrimary)
-                                            
-                                            Spacer()
-                                        }
-                                        .padding(.vertical, 8)
-                                    }
-                                }
-                            }
-                        }
-                        
                         // 推奨設定カード
                         GoalSettingRecommendationCard(user: user)
                     }
