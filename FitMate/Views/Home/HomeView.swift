@@ -9,9 +9,16 @@ struct HomeView: View {
     @EnvironmentObject var user: User
     @EnvironmentObject var recordViewModel: RecordViewModel
     @StateObject private var healthKitManager = HealthKitManager()
-    @State private var targetCalories = 1800
 
     private let today: Date = Calendar.current.startOfDay(for: Date())
+
+    private var targetCalories: Int {
+        let usesHealthKitEnergy = healthKitManager.isAuthorized && healthKitManager.totalEnergyBurned > 0
+        let maintenanceCalories = usesHealthKitEnergy
+            ? Int(healthKitManager.totalEnergyBurned.rounded())
+            : user.calculateTDEEMifflinStJeor()
+        return user.calculateDailyCalories(maintenanceCalories: maintenanceCalories)
+    }
 
     private var consumedCaloriesToday: Int {
         recordViewModel.dailyRecords
