@@ -13,10 +13,14 @@ struct TrainerSetupView: View {
     @State private var selectedPersonality: TrainerPersonality = .supportive
     @State private var selectedSpecialization: TrainerSpecialization = .weightLoss
     @State private var trainerName: String = ""
-    @State private var isGeneratingImage = false
+    @State private var isGeneratingCandidates = false
+    @State private var isFinalizing = false
     @State private var generatedTrainer: PersonalTrainer?
+    @State private var generationId: String?
+    @State private var candidates: [GeneratedAvatarCandidate] = []
+    @State private var selectedCandidateId: String?
     
-    private let imageGenerationService = TrainerImageGenerationService()
+    private let avatarService = TrainerAvatarGenerationService()
     
     var body: some View {
         ScrollView {
@@ -62,11 +66,11 @@ struct TrainerSetupView: View {
                     .shadow(radius: 5)
                 }
                 
-                if isGeneratingImage {
+                if isGeneratingCandidates || isFinalizing {
                     VStack(spacing: 15) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        Text("あなた専用のトレーナーを生成中...")
+                        Text(isFinalizing ? "最終版を生成中..." : "候補を生成中...")
                             .font(.headline)
                         Text("少々お待ちください")
                             .font(.caption)
@@ -75,6 +79,37 @@ struct TrainerSetupView: View {
                     .padding()
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(15)
+                }
+
+                if !candidates.isEmpty && generatedTrainer == nil {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("候補から1枚選んでください（6枚）")
+                            .font(.headline)
+
+                        let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(candidates) { candidate in
+                                Image(uiImage: candidate.image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 100, height: 100)
+                                    .clipped()
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(selectedCandidateId == candidate.id ? Color.blue : Color.clear, lineWidth: 3)
+                                    )
+                                    .onTapGesture {
+                                        selectedCandidateId = candidate.id
+                                    }
+                                    .accessibilityLabel("候補アバター")
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(15)
+                    .shadow(radius: 5)
                 }
                 
                 // トレーナー設定フォーム
@@ -163,16 +198,29 @@ struct TrainerSetupView: View {
                 .padding()
                 
                 // トレーナー生成ボタン
-                Button("トレーナーを生成") {
-                    generateTrainer()
+                Button(candidates.isEmpty ? "候補を生成" : "候補を生成し直す") {
+                    generateCandidates()
                 }
-                .disabled(trainerName.isEmpty || isGeneratingImage)
+                .disabled(trainerName.isEmpty || isGeneratingCandidates || isFinalizing)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(trainerName.isEmpty || isGeneratingImage ? Color.gray : Color.green)
+                .background(trainerName.isEmpty || isGeneratingCandidates || isFinalizing ? Color.gray : Color.green)
                 .cornerRadius(10)
                 .padding(.horizontal)
+
+                if !candidates.isEmpty && generatedTrainer == nil {
+                    Button("この候補で決定") {
+                        finalizeTrainer()
+                    }
+                    .disabled(selectedCandidateId == nil || isGeneratingCandidates || isFinalizing)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(selectedCandidateId == nil || isGeneratingCandidates || isFinalizing ? Color.gray : Color.blue)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                }
                 
                 Spacer()
             }
@@ -187,40 +235,60 @@ struct TrainerSetupView: View {
     }
     
     private func generateTrainer() {
-        isGeneratingImage = true
-        
-        let preferences = TrainerPreferences(
+        // 互換のため残しています（旧1枚生成フロー）
+        // 新フローは generateCandidates() -> finalizeTrainer() を使用
+    }
+
+    private func currentPreferences() -> TrainerPreferences {
+        TrainerPreferences(
             gender: selectedGender,
             age: selectedAge,
             style: selectedStyle,
             personality: selectedPersonality,
             specialization: selectedSpecialization
         )
-        
-        imageGenerationService.generateTrainerImage(preferences: preferences) { result in
-            isGeneratingImage = false
-            
-            switch result {
-            case .success(let imageResult):
-                let trainer = PersonalTrainer(
-                    name: trainerName,
-                    preferences: preferences,
-                    image: imageResult.image
-                )
-                generatedTrainer = trainer
-                user.setPersonalTrainer(trainer)
-                
-            case .failure(let error):
-                print("トレーナー画像生成エラー: \(error.localizedDescription)")
-                // エラーの場合もデフォルト画像でトレーナーを作成
-                let trainer = PersonalTrainer(
-                    name: trainerName,
-                    preferences: preferences,
-                    image: nil
-                )
-                generatedTrainer = trainer
-                user.setPersonalTrainer(trainer)
-            }
+    }
+
+    private func generateCandidates() {
+        isGeneratingCandidates = true
+        generatedTrainer = nil
+        candidates = []
+        selectedCandidateId = nil
+
+        let preferences = currentPreferences()
+        Task { @MainActor in
+            let result = await avatarService.generateCandidates(preferences: preferences, count: 6)
+            generationId = result.generationId
+            candidates = result.candidates
+            isGeneratingCandidates = false
+        }
+    }
+
+    private func finalizeTrainer() {
+        guard let generationId, let selectedCandidateId else { return }
+
+        isFinalizing = true
+        let preferences = currentPreferences()
+
+        Task { @MainActor in
+            let image = await avatarService.finalize(
+                generationId: generationId,
+                selectedCandidateId: selectedCandidateId,
+                preferences: preferences
+            )
+
+            let trainer = PersonalTrainer(
+                name: trainerName,
+                preferences: preferences,
+                image: image
+            )
+            generatedTrainer = trainer
+            user.setPersonalTrainer(trainer)
+
+            // 候補は確定後にクリア
+            candidates = []
+            self.selectedCandidateId = nil
+            isFinalizing = false
         }
     }
     

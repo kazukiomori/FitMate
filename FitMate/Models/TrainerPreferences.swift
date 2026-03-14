@@ -13,7 +13,7 @@ struct TrainerPreferences {
     let specialization: TrainerSpecialization
 }
 
-enum TrainerGender: String, CaseIterable {
+enum TrainerGender: String, CaseIterable, Codable {
     case male = "男性"
     case female = "女性"
     case nonBinary = "その他"
@@ -27,7 +27,7 @@ enum TrainerGender: String, CaseIterable {
     }
 }
 
-enum TrainerAge: String, CaseIterable {
+enum TrainerAge: String, CaseIterable, Codable {
     case young = "20代"
     case middle = "30代"
     case mature = "40代以上"
@@ -41,7 +41,7 @@ enum TrainerAge: String, CaseIterable {
     }
 }
 
-enum TrainerStyle: String, CaseIterable {
+enum TrainerStyle: String, CaseIterable, Codable {
     case professional = "プロフェッショナル"
     case friendly = "フレンドリー"
     case energetic = "エネルギッシュ"
@@ -57,7 +57,7 @@ enum TrainerStyle: String, CaseIterable {
     }
 }
 
-enum TrainerPersonality: String, CaseIterable {
+enum TrainerPersonality: String, CaseIterable, Codable {
     case motivational = "やる気を引き出す"
     case supportive = "優しくサポート"
     case strict = "厳しく指導"
@@ -73,7 +73,7 @@ enum TrainerPersonality: String, CaseIterable {
     }
 }
 
-enum TrainerSpecialization: String, CaseIterable {
+enum TrainerSpecialization: String, CaseIterable, Codable {
     case weightLoss = "体重減少"
     case muscleBuilding = "筋力アップ"
     case healthyLifestyle = "健康的な生活"

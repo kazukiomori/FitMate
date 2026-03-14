@@ -10,12 +10,13 @@ struct OnboardingView: View {
     @AppStorage("isOnboardingComplete") private var isOnboardingComplete: Bool = false
     @State private var currentStep = 0
     @State private var offset: CGFloat = 0
-    private let totalSteps = 4
+    private let totalSteps = 5
 
     private let stepTitles = [
         "ようこそ",
         "あなたのこと",
         "目標（ゆるめでOK）",
+        "トレーナー",
         "できること"
     ]
     
@@ -65,8 +66,10 @@ struct OnboardingView: View {
                         .tag(1)
                     GoalSettingView(showsBackground: false)
                         .tag(2)
-                    FeatureIntroView()
+                    TrainerSetupView()
                         .tag(3)
+                    FeatureIntroView()
+                        .tag(4)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.5), value: currentStep)
@@ -119,7 +122,8 @@ struct AnimatedGradientBackground: View {
         case 0: return [Color.purple, Color.pink, Color.orange]
         case 1: return [Color.blue, Color.cyan, Color.mint]
         case 2: return [Color.green, Color.teal, Color.blue]
-        case 3: return [Color.orange, Color.red, Color.pink]
+        case 3: return [Color.indigo, Color.blue, Color.cyan]
+        case 4: return [Color.orange, Color.red, Color.pink]
         default: return [Color.purple, Color.blue, Color.cyan]
         }
     }
