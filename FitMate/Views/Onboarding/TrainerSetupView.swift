@@ -13,233 +13,12 @@ struct TrainerSetupView: View {
     @State private var selectedPersonality: TrainerPersonality = .supportive
     @State private var selectedSpecialization: TrainerSpecialization = .weightLoss
     @State private var trainerName: String = ""
-    @State private var isGeneratingCandidates = false
-    @State private var isFinalizing = false
+    @State private var isGeneratingImage = false
     @State private var generatedTrainer: PersonalTrainer?
-    @State private var generationId: String?
-    @State private var candidates: [GeneratedAvatarCandidate] = []
-    @State private var selectedCandidateId: String?
     
-    private let avatarService = TrainerAvatarGenerationService()
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 25) {
-                Text("あなた専用のトレーナーを作成")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.center)
-                
-                // 生成されたトレーナー画像表示
-                if let trainer = generatedTrainer {
-                    VStack(spacing: 15) {
-                        if let image = trainer.image {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 200, height: 200)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.blue, lineWidth: 4))
-                        }
-                        
-                        Text(trainer.name)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text(trainer.preferences.personality.description)
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                        
-                        Text("「\(trainer.getTodaysMessage())」")
-                            .font(.body)
-                            .italic()
-                            .foregroundColor(.blue)
-                            .multilineTextAlignment(.center)
-                            .padding()
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(10)
-                    }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(15)
-                    .shadow(radius: 5)
-                }
-                
-                if isGeneratingCandidates || isFinalizing {
-                    VStack(spacing: 15) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                        Text(isFinalizing ? "最終版を生成中..." : "候補を生成中...")
-                            .font(.headline)
-                        Text("少々お待ちください")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(15)
-                }
+    private let imageGenerationService = TrainerImageGenerationService()
 
-                if !candidates.isEmpty && generatedTrainer == nil {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("候補から1枚選んでください（6枚）")
-                            .font(.headline)
-
-                        let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-                        LazyVGrid(columns: columns, spacing: 12) {
-                            ForEach(candidates) { candidate in
-                                Image(uiImage: candidate.image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 100, height: 100)
-                                    .clipped()
-                                    .cornerRadius(12)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(selectedCandidateId == candidate.id ? Color.blue : Color.clear, lineWidth: 3)
-                                    )
-                                    .onTapGesture {
-                                        selectedCandidateId = candidate.id
-                                    }
-                                    .accessibilityLabel("候補アバター")
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(15)
-                    .shadow(radius: 5)
-                }
-                
-                // トレーナー設定フォーム
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("トレーナーの名前")
-                            .font(.headline)
-                        TextField("例: さくら先生", text: $trainerName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("性別")
-                            .font(.headline)
-                        Picker("性別", selection: $selectedGender) {
-                            ForEach(TrainerGender.allCases, id: \.self) { gender in
-                                Text(gender.rawValue).tag(gender)
-                            }
-                        }
-                        .pickerStyle(SegmentedPickerStyle())
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("年代")
-                            .font(.headline)
-                        Picker("年代", selection: $selectedAge) {
-                            ForEach(TrainerAge.allCases, id: \.self) { age in
-                                Text(age.rawValue).tag(age)
-                            }
-                        }
-                        .pickerStyle(SegmentedPickerStyle())
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("スタイル")
-                            .font(.headline)
-                        Picker("スタイル", selection: $selectedStyle) {
-                            ForEach(TrainerStyle.allCases, id: \.self) { style in
-                                Text(style.rawValue).tag(style)
-                            }
-                        }
-                        .pickerStyle(SegmentedPickerStyle())
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("指導方法")
-                            .font(.headline)
-                        ForEach(TrainerPersonality.allCases, id: \.self) { personality in
-                            Button(action: {
-                                selectedPersonality = personality
-                            }) {
-                                HStack {
-                                    Image(systemName: selectedPersonality == personality ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(selectedPersonality == personality ? .blue : .gray)
-                                    
-                                    VStack(alignment: .leading) {
-                                        Text(personality.rawValue)
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.primary)
-                                        Text(personality.description)
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    
-                                    Spacer()
-                                }
-                                .padding()
-                                .background(selectedPersonality == personality ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
-                                .cornerRadius(10)
-                            }
-                        }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("専門分野")
-                            .font(.headline)
-                        Picker("専門分野", selection: $selectedSpecialization) {
-                            ForEach(TrainerSpecialization.allCases, id: \.self) { spec in
-                                Text(spec.rawValue).tag(spec)
-                            }
-                        }
-                        .pickerStyle(MenuPickerStyle())
-                    }
-                }
-                .padding()
-                
-                // トレーナー生成ボタン
-                Button(candidates.isEmpty ? "候補を生成" : "候補を生成し直す") {
-                    generateCandidates()
-                }
-                .disabled(trainerName.isEmpty || isGeneratingCandidates || isFinalizing)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(trainerName.isEmpty || isGeneratingCandidates || isFinalizing ? Color.gray : Color.green)
-                .cornerRadius(10)
-                .padding(.horizontal)
-
-                if !candidates.isEmpty && generatedTrainer == nil {
-                    Button("この候補で決定") {
-                        finalizeTrainer()
-                    }
-                    .disabled(selectedCandidateId == nil || isGeneratingCandidates || isFinalizing)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(selectedCandidateId == nil || isGeneratingCandidates || isFinalizing ? Color.gray : Color.blue)
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                }
-                
-                Spacer()
-            }
-            .padding()
-        }
-        .onAppear {
-            // デフォルト名を設定
-            if trainerName.isEmpty {
-                trainerName = generateDefaultTrainerName()
-            }
-        }
-    }
-    
-    private func generateTrainer() {
-        // 互換のため残しています（旧1枚生成フロー）
-        // 新フローは generateCandidates() -> finalizeTrainer() を使用
-    }
-
-    private func currentPreferences() -> TrainerPreferences {
+    private var preferences: TrainerPreferences {
         TrainerPreferences(
             gender: selectedGender,
             age: selectedAge,
@@ -249,47 +28,304 @@ struct TrainerSetupView: View {
         )
     }
 
-    private func generateCandidates() {
-        isGeneratingCandidates = true
-        generatedTrainer = nil
-        candidates = []
-        selectedCandidateId = nil
+    private var genderOptions: [TrainerGender] {
+        // 既存enumは nonBinary を含むが、UIではまず男女のみを提示
+        [.female, .male]
+    }
+    
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 22) {
+                OnboardingHeader(
+                    title: "あなた専用のトレーナー",
+                    subtitle: "好みを選んで、アバターを生成しましょう。\nあとでいつでも作り直せます。"
+                )
 
-        let preferences = currentPreferences()
-        Task { @MainActor in
-            let result = await avatarService.generateCandidates(preferences: preferences, count: 6)
-            generationId = result.generationId
-            candidates = result.candidates
-            isGeneratingCandidates = false
+                trainerPreviewCard
+
+                if isGeneratingImage {
+                    generatingCard
+                }
+
+                editorCard
+
+                HStack(spacing: 12) {
+                    Button("おまかせ") {
+                        randomizeAll()
+                    }
+                    .buttonStyle(AoiSecondaryButtonStyle())
+
+                    Button("この内容で生成") {
+                        generateTrainer()
+                    }
+                    .buttonStyle(AoiPrimaryButtonStyle())
+                    .disabled(trainerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isGeneratingImage)
+                }
+
+                Spacer(minLength: 80)
+            }
+            .onboardingPagePadding()
+        }
+        .onAppear {
+            // デフォルト名を設定
+            if trainerName.isEmpty {
+                trainerName = generateDefaultTrainerName()
+            }
         }
     }
 
-    private func finalizeTrainer() {
-        guard let generationId, let selectedCandidateId else { return }
+    private var trainerPreviewCard: some View {
+        Group {
+            if let trainer = generatedTrainer {
+                VStack(spacing: 14) {
+                    if let image = trainer.image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 160, height: 160)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(AoiOnboardingTheme.accent, lineWidth: 4)
+                            )
+                    } else {
+                        Circle()
+                            .fill(AoiOnboardingTheme.accentSoft)
+                            .frame(width: 160, height: 160)
+                            .overlay(
+                                Text("No Image")
+                                    .font(.caption)
+                                    .foregroundColor(AoiOnboardingTheme.textSecondary)
+                            )
+                    }
 
-        isFinalizing = true
-        let preferences = currentPreferences()
+                    Text(trainer.name)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(AoiOnboardingTheme.textPrimary)
 
-        Task { @MainActor in
-            let image = await avatarService.finalize(
-                generationId: generationId,
-                selectedCandidateId: selectedCandidateId,
-                preferences: preferences
-            )
+                    Text(trainer.preferences.personality.description)
+                        .font(.subheadline)
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
+                        .multilineTextAlignment(.center)
 
-            let trainer = PersonalTrainer(
-                name: trainerName,
-                preferences: preferences,
-                image: image
-            )
-            generatedTrainer = trainer
-            user.setPersonalTrainer(trainer)
+                    Text("「\(trainer.getTodaysMessage())」")
+                        .font(.subheadline)
+                        .foregroundColor(AoiOnboardingTheme.accent)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(AoiOnboardingTheme.accentSoft)
+                        )
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("プレビュー")
+                            .font(.headline)
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
+                        Spacer()
+                        Text(trainerName.isEmpty ? "（名前未設定）" : trainerName)
+                            .font(.subheadline)
+                            .foregroundColor(AoiOnboardingTheme.textSecondary)
+                    }
 
-            // 候補は確定後にクリア
-            candidates = []
-            self.selectedCandidateId = nil
-            isFinalizing = false
+                    Text("性別: \(selectedGender.rawValue) / 年代: \(selectedAge.rawValue)")
+                        .font(.subheadline)
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
+                    Text("スタイル: \(selectedStyle.rawValue)")
+                        .font(.subheadline)
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
+                    Text("指導: \(selectedPersonality.rawValue) / 専門: \(selectedSpecialization.rawValue)")
+                        .font(.subheadline)
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AoiOnboardingTheme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(AoiOnboardingTheme.border, lineWidth: 1)
+                )
+        )
+        .shadow(color: AoiOnboardingTheme.shadow, radius: 12, x: 0, y: 6)
+    }
+
+    private var generatingCard: some View {
+        HStack(spacing: 14) {
+            ProgressView()
+                .tint(AoiOnboardingTheme.accent)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("トレーナーを生成中…")
+                    .font(.headline)
+                    .foregroundColor(AoiOnboardingTheme.textPrimary)
+                Text("少々お待ちください")
+                    .font(.caption)
+                    .foregroundColor(AoiOnboardingTheme.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AoiOnboardingTheme.accentSoft)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(AoiOnboardingTheme.border, lineWidth: 1)
+                )
+        )
+    }
+
+    private var editorCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("好みを選ぶ")
+                .font(.headline)
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("トレーナーの名前")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AoiOnboardingTheme.textPrimary)
+                TextField("例: さくら先生", text: $trainerName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            }
+
+            optionSection(title: "性別") {
+                FlexibleTagLayout {
+                    ForEach(genderOptions, id: \.self) { gender in
+                        SelectableChip(
+                            title: gender.rawValue,
+                            isSelected: selectedGender == gender
+                        ) {
+                            selectedGender = gender
+                            generatedTrainer = nil
+                        }
+                    }
+                }
+            }
+
+            optionSection(title: "年代") {
+                FlexibleTagLayout {
+                    ForEach(TrainerAge.allCases, id: \.self) { age in
+                        SelectableChip(
+                            title: age.rawValue,
+                            isSelected: selectedAge == age
+                        ) {
+                            selectedAge = age
+                            generatedTrainer = nil
+                        }
+                    }
+                }
+            }
+
+            optionSection(title: "スタイル") {
+                FlexibleTagLayout {
+                    ForEach(TrainerStyle.allCases, id: \.self) { style in
+                        SelectableChip(
+                            title: style.rawValue,
+                            isSelected: selectedStyle == style
+                        ) {
+                            selectedStyle = style
+                            generatedTrainer = nil
+                        }
+                    }
+                }
+            }
+
+            optionSection(title: "指導") {
+                FlexibleTagLayout {
+                    ForEach(TrainerPersonality.allCases, id: \.self) { personality in
+                        SelectableChip(
+                            title: personality.rawValue,
+                            isSelected: selectedPersonality == personality
+                        ) {
+                            selectedPersonality = personality
+                            generatedTrainer = nil
+                        }
+                    }
+                }
+            }
+
+            optionSection(title: "専門") {
+                FlexibleTagLayout {
+                    ForEach(TrainerSpecialization.allCases, id: \.self) { specialization in
+                        SelectableChip(
+                            title: specialization.rawValue,
+                            isSelected: selectedSpecialization == specialization
+                        ) {
+                            selectedSpecialization = specialization
+                            generatedTrainer = nil
+                        }
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AoiOnboardingTheme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(AoiOnboardingTheme.border, lineWidth: 1)
+                )
+        )
+        .shadow(color: AoiOnboardingTheme.shadow, radius: 12, x: 0, y: 6)
+    }
+
+    private func optionSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
+            content()
+        }
+    }
+    
+    private func generateTrainer() {
+        isGeneratingImage = true
+
+        imageGenerationService.generateTrainerImage(preferences: preferences) { result in
+            isGeneratingImage = false
+            
+            switch result {
+            case .success(let imageResult):
+                let trainer = PersonalTrainer(
+                    name: trainerName,
+                    preferences: preferences,
+                    image: imageResult.image
+                )
+                generatedTrainer = trainer
+                user.setPersonalTrainer(trainer)
+                
+            case .failure(let error):
+                print("トレーナー画像生成エラー: \(error.localizedDescription)")
+                // エラーの場合もデフォルト画像でトレーナーを作成
+                let trainer = PersonalTrainer(
+                    name: trainerName,
+                    preferences: preferences,
+                    image: nil
+                )
+                generatedTrainer = trainer
+                user.setPersonalTrainer(trainer)
+            }
+        }
+    }
+
+    private func randomizeAll() {
+        trainerName = generateDefaultTrainerName()
+        selectedGender = genderOptions.randomElement() ?? .female
+        selectedAge = TrainerAge.allCases.randomElement() ?? .middle
+        selectedStyle = TrainerStyle.allCases.randomElement() ?? .friendly
+        selectedPersonality = TrainerPersonality.allCases.randomElement() ?? .supportive
+        selectedSpecialization = TrainerSpecialization.allCases.randomElement() ?? .weightLoss
+        generatedTrainer = nil
     }
     
     private func generateDefaultTrainerName() -> String {

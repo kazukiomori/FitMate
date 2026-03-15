@@ -44,16 +44,9 @@ struct OnboardingView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(AoiOnboardingTheme.textPrimary)
 
-                        let remaining = max(totalSteps - (currentStep + 1), 0)
-                        if remaining > 0 {
-                            Text("あと\(remaining)つ")
-                                .font(.caption)
-                                .foregroundColor(AoiOnboardingTheme.textSecondary)
-                        } else {
-                            Text("ラスト")
-                                .font(.caption)
-                                .foregroundColor(AoiOnboardingTheme.textSecondary)
-                        }
+                        Text("あと\(max(totalSteps - (currentStep + 1), 0))つ")
+                            .font(.caption)
+                            .foregroundColor(AoiOnboardingTheme.textSecondary)
                     }
                 }
                 .padding(.top, 20)
@@ -122,8 +115,7 @@ struct AnimatedGradientBackground: View {
         case 0: return [Color.purple, Color.pink, Color.orange]
         case 1: return [Color.blue, Color.cyan, Color.mint]
         case 2: return [Color.green, Color.teal, Color.blue]
-        case 3: return [Color.indigo, Color.blue, Color.cyan]
-        case 4: return [Color.orange, Color.red, Color.pink]
+        case 3: return [Color.orange, Color.red, Color.pink]
         default: return [Color.purple, Color.blue, Color.cyan]
         }
     }

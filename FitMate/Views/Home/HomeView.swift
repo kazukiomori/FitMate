@@ -9,16 +9,9 @@ struct HomeView: View {
     @EnvironmentObject var user: User
     @EnvironmentObject var recordViewModel: RecordViewModel
     @StateObject private var healthKitManager = HealthKitManager()
+    @State private var targetCalories = 1800
 
     private let today: Date = Calendar.current.startOfDay(for: Date())
-
-    private var targetCalories: Int {
-        let usesHealthKitEnergy = healthKitManager.isAuthorized && healthKitManager.totalEnergyBurned > 0
-        let maintenanceCalories = usesHealthKitEnergy
-            ? Int(healthKitManager.totalEnergyBurned.rounded())
-            : user.calculateTDEEMifflinStJeor()
-        return user.calculateDailyCalories(maintenanceCalories: maintenanceCalories)
-    }
 
     private var consumedCaloriesToday: Int {
         recordViewModel.dailyRecords
@@ -92,7 +85,7 @@ struct HomeView: View {
                             )
                             StatCard(
                                 title: "消費",
-                                value: "\(Int(healthKitManager.totalEnergyBurned))kcal",
+                                value: "\(Int(healthKitManager.activeEnergyBurned))kcal",
                                 color: .red
                             )
                         }
@@ -213,7 +206,7 @@ struct HealthActivityCard: View {
                                     .font(.title2)
                             }
                             
-                            Text("\(Int(healthKitManager.totalEnergyBurned))")
+                            Text("\(Int(healthKitManager.activeEnergyBurned))")
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .foregroundColor(.red)
@@ -284,7 +277,7 @@ struct HealthActivityCard: View {
     
     private func getActivityLevel() -> (title: String, color: Color) {
         let steps = healthKitManager.stepCount
-        let calories = healthKitManager.totalEnergyBurned
+        let calories = healthKitManager.activeEnergyBurned
         
         if steps >= 10000 || calories >= 400 {
             return ("とても活発", .green)
