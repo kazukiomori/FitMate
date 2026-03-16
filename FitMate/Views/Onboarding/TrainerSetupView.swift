@@ -66,12 +66,6 @@ struct TrainerSetupView: View {
             }
             .onboardingPagePadding()
         }
-        .onAppear {
-            // デフォルト名を設定
-            if trainerName.isEmpty {
-                trainerName = generateDefaultTrainerName()
-            }
-        }
     }
 
     private var trainerPreviewCard: some View {
