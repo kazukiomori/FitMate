@@ -12,6 +12,10 @@ struct OnboardingView: View {
     @State private var offset: CGFloat = 0
     private let totalSteps = 5
 
+    private var remainingSteps: Int {
+        max(totalSteps - (currentStep + 1), 0)
+    }
+
     private let stepTitles = [
         "ようこそ",
         "あなたのこと",
@@ -44,7 +48,7 @@ struct OnboardingView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(AoiOnboardingTheme.textPrimary)
 
-                        Text("あと\(max(totalSteps - (currentStep + 1), 0))つ")
+                        Text(remainingSteps == 0 ? "これで最後" : "あと\(remainingSteps)つ")
                             .font(.caption)
                             .foregroundColor(AoiOnboardingTheme.textSecondary)
                     }
