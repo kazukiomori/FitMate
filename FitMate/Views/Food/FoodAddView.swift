@@ -40,7 +40,7 @@ struct FoodAddView: View {
                 },
                 .default(Text("写真認識 (AI)")) {
                     imageRecognitionMode = .api
-                    imageSourceType = .camera
+                    imageSourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
                     showingImagePicker = true
                 },
                 .cancel()
@@ -343,7 +343,11 @@ struct ImagePicker: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
-        picker.sourceType = sourceType
+        if sourceType == .camera, !UIImagePickerController.isSourceTypeAvailable(.camera) {
+            picker.sourceType = .photoLibrary
+        } else {
+            picker.sourceType = sourceType
+        }
         picker.delegate = context.coordinator
         return picker
     }
