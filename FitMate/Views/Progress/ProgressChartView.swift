@@ -75,6 +75,11 @@ struct ProgressChartView: View {
 
 struct ProgressSummaryCard: View {
     @ObservedObject var recordViewModel: RecordViewModel
+    @EnvironmentObject var user: User
+
+    private var displayedCurrentWeight: Double {
+        recordViewModel.getLatestWeight() ?? user.currentWeight
+    }
     
     var body: some View {
         VStack(spacing: 15) {
@@ -84,7 +89,7 @@ struct ProgressSummaryCard: View {
             
             HStack(spacing: 40) {
                 VStack {
-                    Text(String(format: "%.1f", recordViewModel.weightEntries.first?.weight ?? 0))
+                    Text(String(format: "%.1f", displayedCurrentWeight))
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundColor(.blue)
