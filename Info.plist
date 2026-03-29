@@ -4,5 +4,9 @@
 <dict>
 	<key>CLIENT_TOKEN</key>
 	<string>$(CLIENT_TOKEN)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>食事の写真を撮影してAIで解析するためにカメラを使用します。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>食事の写真を選択してAIで解析するために写真ライブラリを使用します。</string>
 </dict>
 </plist>
