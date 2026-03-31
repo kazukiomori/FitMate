@@ -12,6 +12,8 @@ struct TrainerSetupView: View {
     @State private var candidates: [TrainerCandidate] = []
     @State private var topIndex: Int = 0
 
+    @State private var pendingTrainer: PersonalTrainer? = nil
+
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging = false
 
@@ -33,6 +35,8 @@ struct TrainerSetupView: View {
 
                 if user.personalTrainer != nil {
                     dedicatedTrainerCard
+                } else if pendingTrainer != nil {
+                    pendingConfirmationCard
                 } else {
                     OnboardingHintPill(text: "右スワイプでLike / 左でスキップ")
 
@@ -69,16 +73,26 @@ struct TrainerSetupView: View {
                 ForEach(visibleCandidates.reversed()) { candidate in
                     let index = indexOf(candidate)
 
-                    TrainerSwipeCard(
-                        candidate: candidate,
-                        dragOffset: index == topIndex ? dragOffset : .zero,
-                        isTop: index == topIndex
-                    )
+                    Group {
+                        if index == topIndex {
+                            TrainerSwipeCard(
+                                candidate: candidate,
+                                dragOffset: dragOffset,
+                                isTop: true
+                            )
+                            .gesture(dragGestureForTopCard)
+                        } else {
+                            TrainerSwipeCard(
+                                candidate: candidate,
+                                dragOffset: .zero,
+                                isTop: false
+                            )
+                        }
+                    }
                     .rotationEffect(.degrees(index == topIndex ? Double(dragOffset.width / 18) : 0))
                     .offset(x: index == topIndex ? dragOffset.width : 0,
                             y: stackYOffset(for: index))
                     .scaleEffect(stackScale(for: index))
-                    .gesture(index == topIndex ? dragGestureForTopCard : nil)
                     .animation(.spring(response: 0.45, dampingFraction: 0.85), value: dragOffset)
                 }
             }
@@ -98,7 +112,49 @@ struct TrainerSetupView: View {
                 TrainerDedicatedCard(trainer: trainer)
             }
 
+            HStack(spacing: 12) {
+                Button("変更する") {
+                    user.clearPersonalTrainer()
+                    pendingTrainer = nil
+                    prepareCandidatesIfNeeded()
+                }
+                .buttonStyle(AoiSecondaryButtonStyle())
+                .frame(maxWidth: .infinity)
+            }
+
             Text("次へ進んでも、この設定は保存されます")
+                .font(.caption)
+                .foregroundColor(AoiOnboardingTheme.textSecondary)
+        }
+    }
+
+    private var pendingConfirmationCard: some View {
+        VStack(spacing: 14) {
+            Text("このトレーナーで決定しますか？")
+                .font(.headline)
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+            if let trainer = pendingTrainer {
+                TrainerDedicatedCard(trainer: trainer)
+            }
+
+            HStack(spacing: 12) {
+                Button("別のトレーナーを見る") {
+                    pendingTrainer = nil
+                }
+                .buttonStyle(AoiSecondaryButtonStyle())
+                .frame(maxWidth: .infinity)
+
+                Button("このトレーナーに決定") {
+                    guard let trainer = pendingTrainer else { return }
+                    user.setPersonalTrainer(trainer)
+                    pendingTrainer = nil
+                }
+                .buttonStyle(AoiPrimaryButtonStyle())
+                .frame(maxWidth: .infinity)
+            }
+
+            Text("この画面でいつでも変更できます")
                 .font(.caption)
                 .foregroundColor(AoiOnboardingTheme.textSecondary)
         }
@@ -197,7 +253,9 @@ struct TrainerSetupView: View {
                 preferences: candidate.preferences,
                 image: candidate.image
             )
-            user.setPersonalTrainer(trainer)
+
+            pendingTrainer = trainer
+            topIndex = min(topIndex + 1, candidates.count)
         }
     }
 
@@ -233,11 +291,13 @@ struct TrainerSetupView: View {
     private func requestImage(for index: Int) {
         let preferences = candidates[index].preferences
         imageGenerationService.generateTrainerImage(preferences: preferences) { result in
-            switch result {
-            case .success(let imageResult):
-                candidates[index].image = imageResult.image
-            case .failure:
-                candidates[index].image = nil
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let imageResult):
+                    candidates[index].image = imageResult.image
+                case .failure:
+                    candidates[index].image = nil
+                }
             }
         }
     }

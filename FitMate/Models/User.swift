@@ -96,4 +96,9 @@ class User: ObservableObject {
         personalTrainer = trainer
         hasCompletedTrainerSetup = true
     }
+
+    func clearPersonalTrainer() {
+        personalTrainer = nil
+        hasCompletedTrainerSetup = false
+    }
 }
