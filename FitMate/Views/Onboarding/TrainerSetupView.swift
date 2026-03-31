@@ -14,6 +14,8 @@ struct TrainerSetupView: View {
 
     @Binding var pendingTrainer: PersonalTrainer?
 
+    @State private var genderFilter: TrainerGenderFilter = .any
+
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging = false
 
@@ -42,6 +44,8 @@ struct TrainerSetupView: View {
                 } else if pendingTrainer != nil {
                     pendingConfirmationCard
                 } else {
+                    genderFilterSection
+
                     OnboardingHintPill(text: "右スワイプでLike / 左でスキップ")
 
                     deckArea
@@ -67,6 +71,28 @@ struct TrainerSetupView: View {
             didInitialize = true
             prepareCandidatesIfNeeded()
         }
+    }
+
+    private var genderFilterSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("トレーナーの性別")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+            FlexibleTagLayout {
+                ForEach(TrainerGenderFilter.allCases) { filter in
+                    SelectableChip(
+                        title: filter.label,
+                        isSelected: genderFilter == filter
+                    ) {
+                        guard genderFilter != filter else { return }
+                        genderFilter = filter
+                        regenerateCandidates()
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var deckArea: some View {
@@ -120,7 +146,7 @@ struct TrainerSetupView: View {
                 Button("変更する") {
                     user.clearPersonalTrainer()
                     pendingTrainer = nil
-                    prepareCandidatesIfNeeded()
+                    regenerateCandidates()
                 }
                 .buttonStyle(AoiSecondaryButtonStyle())
                 .frame(maxWidth: .infinity)
@@ -253,11 +279,15 @@ struct TrainerSetupView: View {
             return
         }
 
+        regenerateCandidates()
+    }
+
+    private func regenerateCandidates() {
         isGeneratingCandidates = true
-        candidates = TrainerCandidate.generateDefaults(count: 8)
+        pendingTrainer = nil
+        candidates = TrainerCandidate.generateDefaults(count: 8, genderFilter: genderFilter)
         topIndex = 0
         isGeneratingCandidates = false
-
         prefetchCandidateImagesIfNeeded()
     }
 
@@ -291,6 +321,36 @@ struct TrainerSetupView: View {
     }
 }
 
+private enum TrainerGenderFilter: String, CaseIterable, Identifiable, Equatable {
+    case any
+    case female
+    case male
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .any:
+            return "指定なし"
+        case .female:
+            return "女性"
+        case .male:
+            return "男性"
+        }
+    }
+
+    var fixedGender: TrainerGender? {
+        switch self {
+        case .any:
+            return nil
+        case .female:
+            return .female
+        case .male:
+            return .male
+        }
+    }
+}
+
 private struct TrainerCandidate: Identifiable {
     let id: UUID
     let name: String
@@ -298,7 +358,7 @@ private struct TrainerCandidate: Identifiable {
     var image: UIImage?
     var hasRequestedImage: Bool
 
-    static func generateDefaults(count: Int) -> [TrainerCandidate] {
+    static func generateDefaults(count: Int, genderFilter: TrainerGenderFilter) -> [TrainerCandidate] {
         let namePool = [
             "さくら先生", "健太コーチ", "みゆき先生", "たけし先生", "あやか先生", "りょう先生",
             "はるか先生", "しゅんコーチ", "ゆう先生", "あおい先生"
@@ -306,7 +366,7 @@ private struct TrainerCandidate: Identifiable {
 
         func randomPreferences() -> TrainerPreferences {
             TrainerPreferences(
-                gender: TrainerGender.allCases.randomElement() ?? .female,
+                gender: genderFilter.fixedGender ?? (TrainerGender.allCases.randomElement() ?? .female),
                 age: TrainerAge.allCases.randomElement() ?? .middle,
                 style: TrainerStyle.allCases.randomElement() ?? .friendly,
                 personality: TrainerPersonality.allCases.randomElement() ?? .supportive,
