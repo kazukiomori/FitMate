@@ -12,7 +12,7 @@ struct TrainerSetupView: View {
     @State private var candidates: [TrainerCandidate] = []
     @State private var topIndex: Int = 0
 
-    @State private var pendingTrainer: PersonalTrainer? = nil
+    @Binding var pendingTrainer: PersonalTrainer?
 
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging = false
@@ -24,6 +24,10 @@ struct TrainerSetupView: View {
 
     private let swipeThreshold: CGFloat = 120
     private let maxVisibleCards = 3
+
+    init(pendingTrainer: Binding<PersonalTrainer?>) {
+        self._pendingTrainer = pendingTrainer
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -138,23 +142,7 @@ struct TrainerSetupView: View {
                 TrainerDedicatedCard(trainer: trainer)
             }
 
-            HStack(spacing: 12) {
-                Button("別のトレーナーを見る") {
-                    pendingTrainer = nil
-                }
-                .buttonStyle(AoiSecondaryButtonStyle())
-                .frame(maxWidth: .infinity)
-
-                Button("このトレーナーに決定") {
-                    guard let trainer = pendingTrainer else { return }
-                    user.setPersonalTrainer(trainer)
-                    pendingTrainer = nil
-                }
-                .buttonStyle(AoiPrimaryButtonStyle())
-                .frame(maxWidth: .infinity)
-            }
-
-            Text("この画面でいつでも変更できます")
+            Text("下のボタンで決定するか、別の候補を見るか選べます")
                 .font(.caption)
                 .foregroundColor(AoiOnboardingTheme.textSecondary)
         }

@@ -10,6 +10,7 @@ struct OnboardingView: View {
     @AppStorage("isOnboardingComplete") private var isOnboardingComplete: Bool = false
     @State private var currentStep = 0
     @State private var offset: CGFloat = 0
+    @State private var pendingTrainer: PersonalTrainer? = nil
     private let totalSteps = 5
 
     private var remainingSteps: Int {
@@ -63,21 +64,24 @@ struct OnboardingView: View {
                         .tag(1)
                     GoalSettingView(showsBackground: false)
                         .tag(2)
-                    TrainerSetupView()
+                    TrainerSetupView(pendingTrainer: $pendingTrainer)
                         .tag(3)
                     FeatureIntroView()
                         .tag(4)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.5), value: currentStep)
+                .onChange(of: currentStep) { newStep in
+                    if newStep != 3 {
+                        pendingTrainer = nil
+                    }
+                }
                 
                 // ナビゲーションボタン
                 HStack(spacing: 20) {
                     if currentStep > 0 {
-                        Button("戻る") {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                currentStep -= 1
-                            }
+                        Button(backButtonTitle) {
+                            handleBack()
                         }
                         .buttonStyle(AoiSecondaryButtonStyle())
                         .frame(maxWidth: .infinity)
@@ -87,16 +91,8 @@ struct OnboardingView: View {
                             .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                     }
                     
-                    Button(currentStep == totalSteps - 1 ? "始める" : "次へ") {
-                        if currentStep == totalSteps - 1 {
-                            withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
-                                isOnboardingComplete = true
-                            }
-                        } else {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                currentStep += 1
-                            }
-                        }
+                    Button(nextButtonTitle) {
+                        handleNext()
                     }
                     .buttonStyle(AoiPrimaryButtonStyle())
                     .frame(maxWidth: .infinity)
@@ -104,6 +100,56 @@ struct OnboardingView: View {
                 .frame(height: 56) // ボタン高さを揃える
                 .padding(.horizontal, 30)
                 .padding(.bottom, 40)
+            }
+        }
+    }
+
+    private var isTrainerPendingConfirmation: Bool {
+        currentStep == 3 && pendingTrainer != nil
+    }
+
+    private var backButtonTitle: String {
+        isTrainerPendingConfirmation ? "別の候補へ" : "戻る"
+    }
+
+    private var nextButtonTitle: String {
+        if isTrainerPendingConfirmation {
+            return "決定"
+        }
+        return currentStep == totalSteps - 1 ? "始める" : "次へ"
+    }
+
+    private func handleBack() {
+        if isTrainerPendingConfirmation {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                pendingTrainer = nil
+            }
+            return
+        }
+
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            currentStep -= 1
+        }
+    }
+
+    private func handleNext() {
+        if isTrainerPendingConfirmation {
+            guard let trainer = pendingTrainer else { return }
+            user.setPersonalTrainer(trainer)
+            pendingTrainer = nil
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                currentStep += 1
+            }
+            return
+        }
+
+        if currentStep == totalSteps - 1 {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
+                isOnboardingComplete = true
+            }
+        } else {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                currentStep += 1
             }
         }
     }
