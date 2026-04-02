@@ -14,6 +14,8 @@ struct TrainerSetupView: View {
 
     @Binding var pendingTrainer: PersonalTrainer?
 
+    @State private var trainerNameDraft: String = ""
+
     @State private var genderFilter: TrainerGenderFilter = .any
 
     @State private var dragOffset: CGSize = .zero
@@ -49,7 +51,7 @@ struct TrainerSetupView: View {
                     OnboardingHintPill(text: "右スワイプでLike / 左でスキップ")
 
                     deckArea
-                        .frame(height: 380)
+                        .frame(height: 400)
 
                     if isGeneratingCandidates {
                         HStack(spacing: 10) {
@@ -70,7 +72,20 @@ struct TrainerSetupView: View {
             guard !didInitialize else { return }
             didInitialize = true
             prepareCandidatesIfNeeded()
+            syncNameDraftFromPendingTrainer()
         }
+        .onChange(of: pendingTrainer?.id) { _ in
+            syncNameDraftFromPendingTrainer()
+        }
+        .onChange(of: trainerNameDraft) { newValue in
+            guard var trainer = pendingTrainer else { return }
+            trainer.name = newValue
+            pendingTrainer = trainer
+        }
+    }
+
+    private func syncNameDraftFromPendingTrainer() {
+        trainerNameDraft = pendingTrainer?.name ?? ""
     }
 
     private var genderFilterSection: some View {
@@ -165,7 +180,41 @@ struct TrainerSetupView: View {
                 .foregroundColor(AoiOnboardingTheme.textPrimary)
 
             if let trainer = pendingTrainer {
-                TrainerDedicatedCard(trainer: trainer)
+                VStack(spacing: 12) {
+                    TrainerCardImageCarousel(images: trainer.images, height: 340)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("トレーナー名")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+                        TextField("例: あおい先生", text: $trainerNameDraft)
+                            .textInputAutocapitalization(.never)
+                            .disableAutocorrection(true)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(AoiOnboardingTheme.cardBackground)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(AoiOnboardingTheme.border, lineWidth: 1)
+                                    )
+                            )
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AoiOnboardingTheme.cardBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(AoiOnboardingTheme.border, lineWidth: 1)
+                        )
+                )
+                .shadow(color: AoiOnboardingTheme.shadow, radius: 12, x: 0, y: 6)
             }
 
             Text("下のボタンで決定するか、別の候補を見るか選べます")
@@ -450,7 +499,7 @@ private struct TrainerSwipeCard: View {
             ZStack(alignment: .topLeading) {
                 TrainerCardImageCarousel(
                     images: candidate.images,
-                    height: 250
+                    height: 340
                 )
                 .frame(maxWidth: .infinity)
 
@@ -458,36 +507,6 @@ private struct TrainerSwipeCard: View {
                     .padding(14)
                     .allowsHitTesting(false)
             }
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(candidate.name)
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(AoiOnboardingTheme.textPrimary)
-                    Spacer()
-                    Text(candidate.preferences.specialization.rawValue)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AoiOnboardingTheme.textPrimary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule().fill(AoiOnboardingTheme.accentSoft)
-                        )
-                }
-
-                Text("性別: \(candidate.preferences.gender.rawValue) / 年代: \(candidate.preferences.age.rawValue)")
-                    .font(.footnote)
-                    .foregroundColor(AoiOnboardingTheme.textSecondary)
-                Text("スタイル: \(candidate.preferences.style.rawValue)")
-                    .font(.footnote)
-                    .foregroundColor(AoiOnboardingTheme.textSecondary)
-                Text("指導: \(candidate.preferences.personality.rawValue)")
-                    .font(.footnote)
-                    .foregroundColor(AoiOnboardingTheme.textSecondary)
-            }
-            .padding(16)
         }
         .background(
             RoundedRectangle(cornerRadius: 20)

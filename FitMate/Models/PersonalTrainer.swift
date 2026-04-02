@@ -8,7 +8,7 @@ import UIKit
 
 struct PersonalTrainer {
     let id = UUID()
-    let name: String
+    var name: String
     let preferences: TrainerPreferences
     let images: [UIImage]
     var image: UIImage? { images.first }
