@@ -110,7 +110,7 @@ struct TrainerSetupView: View {
                                 dragOffset: dragOffset,
                                 isTop: true
                             )
-                            .gesture(dragGestureForTopCard)
+                            .gesture(dragGestureForTopCard, including: .gesture)
                         } else {
                             TrainerSwipeCard(
                                 candidate: candidate,
@@ -127,7 +127,7 @@ struct TrainerSetupView: View {
                 }
             }
         }
-        .onChange(of: topIndex) { _ in
+        .onChange(of: topIndex) {
             prefetchCandidateImagesIfNeeded()
         }
     }
@@ -265,7 +265,7 @@ struct TrainerSetupView: View {
             let trainer = PersonalTrainer(
                 name: candidate.name,
                 preferences: candidate.preferences,
-                image: candidate.image
+                images: candidate.images
             )
 
             pendingTrainer = trainer
@@ -298,23 +298,40 @@ struct TrainerSetupView: View {
             .filter { $0 >= 0 && $0 < candidates.count }
 
         for index in indicesToPrefetch {
-            if candidates[index].hasRequestedImage {
+            if candidates[index].images.count >= TrainerCandidate.targetImageCount {
+                candidates[index].hasRequestedImages = true
                 continue
             }
-            candidates[index].hasRequestedImage = true
-            requestImage(for: index)
+            if candidates[index].hasRequestedImages {
+                continue
+            }
+            candidates[index].hasRequestedImages = true
+            requestImages(for: index)
         }
     }
 
-    private func requestImage(for index: Int) {
+    private func requestImages(for index: Int) {
+        guard index >= 0 && index < candidates.count else { return }
+
+        let candidateID = candidates[index].id
         let preferences = candidates[index].preferences
-        imageGenerationService.generateTrainerImage(preferences: preferences) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let imageResult):
-                    candidates[index].image = imageResult.image
-                case .failure:
-                    candidates[index].image = nil
+
+        func appendImageIfPossible(_ image: UIImage) {
+            guard let currentIndex = candidates.firstIndex(where: { $0.id == candidateID }) else { return }
+            guard candidates[currentIndex].images.count < TrainerCandidate.targetImageCount else { return }
+            candidates[currentIndex].images.append(image)
+        }
+
+        // 2枚分をまとめてリクエスト（失敗してもそのまま）
+        for _ in 0..<TrainerCandidate.targetImageCount {
+            imageGenerationService.generateTrainerImage(preferences: preferences) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let imageResult):
+                        appendImageIfPossible(imageResult.image)
+                    case .failure:
+                        break
+                    }
                 }
             }
         }
@@ -355,18 +372,27 @@ private struct TrainerCandidate: Identifiable {
     let id: UUID
     let name: String
     let preferences: TrainerPreferences
-    var image: UIImage?
-    var hasRequestedImage: Bool
+    var images: [UIImage]
+    var hasRequestedImages: Bool
+
+    static let targetImageCount = 2
 
     static func generateDefaults(count: Int, genderFilter: TrainerGenderFilter) -> [TrainerCandidate] {
-        let namePool = [
-            "さくら先生", "健太コーチ", "みゆき先生", "たけし先生", "あやか先生", "りょう先生",
-            "はるか先生", "しゅんコーチ", "ゆう先生", "あおい先生"
+        struct AssetTrainer {
+            let name: String
+            let gender: TrainerGender
+            let imageNames: [String]
+        }
+
+        let assetTrainers: [AssetTrainer] = [
+            AssetTrainer(name: "さくら先生", gender: .female, imageNames: ["trainer1_first", "trainer1_second"]),
+            AssetTrainer(name: "あやか先生", gender: .female, imageNames: ["trainer2_first", "trainer2_second"]),
+            AssetTrainer(name: "あおい先生", gender: .female, imageNames: ["trainer3_first", "trainer3_second"])
         ]
 
-        func randomPreferences() -> TrainerPreferences {
+        func randomPreferences(fixedGender: TrainerGender?) -> TrainerPreferences {
             TrainerPreferences(
-                gender: genderFilter.fixedGender ?? (TrainerGender.allCases.randomElement() ?? .female),
+                gender: fixedGender ?? (genderFilter.fixedGender ?? (TrainerGender.allCases.randomElement() ?? .female)),
                 age: TrainerAge.allCases.randomElement() ?? .middle,
                 style: TrainerStyle.allCases.randomElement() ?? .friendly,
                 personality: TrainerPersonality.allCases.randomElement() ?? .supportive,
@@ -374,13 +400,37 @@ private struct TrainerCandidate: Identifiable {
             )
         }
 
+        // 現状アセットが女性トレーナーのみの前提。男性指定のときは生成（デモ含む）に任せる。
+        if genderFilter.fixedGender == .male {
+            return (0..<count).map { i in
+                TrainerCandidate(
+                    id: UUID(),
+                    name: "健太コーチ\(i + 1)",
+                    preferences: randomPreferences(fixedGender: .male),
+                    images: [],
+                    hasRequestedImages: false
+                )
+            }
+        }
+
+        let allowedTrainers = assetTrainers.filter { trainer in
+            guard let fixed = genderFilter.fixedGender else { return true }
+            return trainer.gender == fixed
+        }
+
+        let trainersToUse = allowedTrainers.isEmpty ? assetTrainers : allowedTrainers
+
         return (0..<count).map { i in
-            TrainerCandidate(
+            let trainer = trainersToUse[i % trainersToUse.count]
+
+            let images = trainer.imageNames.compactMap { UIImage(named: $0) }
+
+            return TrainerCandidate(
                 id: UUID(),
-                name: namePool[i % namePool.count],
-                preferences: randomPreferences(),
-                image: nil,
-                hasRequestedImage: false
+                name: trainer.name,
+                preferences: randomPreferences(fixedGender: trainer.gender),
+                images: images,
+                hasRequestedImages: images.count >= targetImageCount
             )
         }
     }
@@ -398,13 +448,15 @@ private struct TrainerSwipeCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
-                cardImage
-                    .frame(height: 250)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
+                TrainerCardImageCarousel(
+                    images: candidate.images,
+                    height: 250
+                )
+                .frame(maxWidth: .infinity)
 
                 swipeLabelOverlay
                     .padding(14)
+                    .allowsHitTesting(false)
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -449,28 +501,6 @@ private struct TrainerSwipeCard: View {
         .padding(.horizontal, 6)
     }
 
-    private var cardImage: some View {
-        ZStack {
-            if let image = candidate.image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                Rectangle()
-                    .fill(AoiOnboardingTheme.accentSoft)
-                    .overlay(
-                        VStack(spacing: 8) {
-                            ProgressView()
-                                .tint(AoiOnboardingTheme.accent)
-                            Text("画像を準備中")
-                                .font(.caption)
-                                .foregroundColor(AoiOnboardingTheme.textSecondary)
-                        }
-                    )
-            }
-        }
-    }
-
     @ViewBuilder
     private var swipeLabelOverlay: some View {
         if isTop {
@@ -507,6 +537,94 @@ private struct TrainerSwipeCard: View {
                     )
                     .opacity(Double(min(-likeProgress, 1)))
             }
+        }
+    }
+}
+
+private struct TrainerCardImageCarousel: View {
+    let images: [UIImage]
+    let height: CGFloat
+
+    @State private var selectedIndex: Int = 0
+
+    var body: some View {
+        ZStack {
+            if images.isEmpty {
+                Rectangle()
+                    .fill(AoiOnboardingTheme.accentSoft)
+                    .overlay(
+                        VStack(spacing: 8) {
+                            ProgressView()
+                                .tint(AoiOnboardingTheme.accent)
+                            Text("画像を準備中")
+                                .font(.caption)
+                                .foregroundColor(AoiOnboardingTheme.textSecondary)
+                        }
+                    )
+            } else {
+                ZStack(alignment: .bottom) {
+                    TabView(selection: $selectedIndex) {
+                        ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .tag(index)
+                                .clipped()
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+
+                    if images.count > 1 {
+                        HStack(spacing: 6) {
+                            ForEach(0..<images.count, id: \.self) { index in
+                                Circle()
+                                    .fill(index == selectedIndex ? AoiOnboardingTheme.accent : AoiOnboardingTheme.border)
+                                    .frame(width: 6, height: 6)
+                                    .opacity(index == selectedIndex ? 1 : 0.6)
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(AoiOnboardingTheme.cardBackground.opacity(0.75))
+                        )
+                        .padding(.bottom, 10)
+                        .allowsHitTesting(false)
+                    }
+                }
+
+                if images.count > 1 {
+                    HStack(spacing: 0) {
+                        Color.clear
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    selectedIndex = max(selectedIndex - 1, 0)
+                                }
+                            }
+                            .accessibilityLabel("前の画像")
+                            .accessibilityAddTraits(.isButton)
+
+                        Color.clear
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    selectedIndex = min(selectedIndex + 1, images.count - 1)
+                                }
+                            }
+                            .accessibilityLabel("次の画像")
+                            .accessibilityAddTraits(.isButton)
+                    }
+                }
+            }
+        }
+        .frame(height: height)
+        .clipped()
+        .onChange(of: images.count) { _ in
+            selectedIndex = min(selectedIndex, max(images.count - 1, 0))
         }
     }
 }

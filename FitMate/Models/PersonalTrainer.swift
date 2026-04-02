@@ -10,16 +10,21 @@ struct PersonalTrainer {
     let id = UUID()
     let name: String
     let preferences: TrainerPreferences
-    let image: UIImage?
+    let images: [UIImage]
+    var image: UIImage? { images.first }
     let motivationalMessages: [String]
     let createdAt: Date
     
-    init(name: String, preferences: TrainerPreferences, image: UIImage? = nil) {
+    init(name: String, preferences: TrainerPreferences, images: [UIImage] = []) {
         self.name = name
         self.preferences = preferences
-        self.image = image
+        self.images = images
         self.createdAt = Date()
         self.motivationalMessages = PersonalTrainer.generateMessages(for: preferences)
+    }
+
+    init(name: String, preferences: TrainerPreferences, image: UIImage? = nil) {
+        self.init(name: name, preferences: preferences, images: image.map { [$0] } ?? [])
     }
     
     static func generateMessages(for preferences: TrainerPreferences) -> [String] {
