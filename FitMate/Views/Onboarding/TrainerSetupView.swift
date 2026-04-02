@@ -51,7 +51,6 @@ struct TrainerSetupView: View {
                     OnboardingHintPill(text: "右スワイプでLike / 左でスキップ")
 
                     deckArea
-                        .frame(height: 400)
 
                     if isGeneratingCandidates {
                         HStack(spacing: 10) {
@@ -181,7 +180,7 @@ struct TrainerSetupView: View {
 
             if let trainer = pendingTrainer {
                 VStack(spacing: 12) {
-                    TrainerCardImageCarousel(images: trainer.images, height: 340)
+                    TrainerCardImageCarousel(images: trainer.images)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -497,10 +496,7 @@ private struct TrainerSwipeCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
-                TrainerCardImageCarousel(
-                    images: candidate.images,
-                    height: 340
-                )
+                TrainerCardImageCarousel(images: candidate.images)
                 .frame(maxWidth: .infinity)
 
                 swipeLabelOverlay
@@ -562,9 +558,10 @@ private struct TrainerSwipeCard: View {
 
 private struct TrainerCardImageCarousel: View {
     let images: [UIImage]
-    let height: CGFloat
 
     @State private var selectedIndex: Int = 0
+
+    private let imageAspectRatio: CGFloat = 3.0 / 4.0
 
     var body: some View {
         ZStack {
@@ -586,9 +583,8 @@ private struct TrainerCardImageCarousel: View {
                         ForEach(Array(images.enumerated()), id: \.offset) { index, image in
                             Image(uiImage: image)
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .aspectRatio(contentMode: .fit)
                                 .tag(index)
-                                .clipped()
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
@@ -640,8 +636,7 @@ private struct TrainerCardImageCarousel: View {
                 }
             }
         }
-        .frame(height: height)
-        .clipped()
+        .aspectRatio(imageAspectRatio, contentMode: .fit)
         .onChange(of: images.count) { _ in
             selectedIndex = min(selectedIndex, max(images.count - 1, 0))
         }
