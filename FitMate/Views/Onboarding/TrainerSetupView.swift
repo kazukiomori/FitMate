@@ -433,9 +433,9 @@ private struct TrainerCandidate: Identifiable {
         }
 
         let assetTrainers: [AssetTrainer] = [
-            AssetTrainer(name: "さくら先生", gender: .female, imageNames: ["trainer1_first", "trainer1_second"]),
-            AssetTrainer(name: "あやか先生", gender: .female, imageNames: ["trainer2_first", "trainer2_second"]),
-            AssetTrainer(name: "あおい先生", gender: .female, imageNames: ["trainer3_first", "trainer3_second"])
+            AssetTrainer(name: "", gender: .female, imageNames: ["trainer1_first", "trainer1_second"]),
+            AssetTrainer(name: "", gender: .female, imageNames: ["trainer2_first", "trainer2_second"]),
+            AssetTrainer(name: "", gender: .female, imageNames: ["trainer3_first", "trainer3_second"])
         ]
 
         func randomPreferences(fixedGender: TrainerGender?) -> TrainerPreferences {
