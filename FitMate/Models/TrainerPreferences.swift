@@ -6,11 +6,11 @@
 import Foundation
 
 struct TrainerPreferences {
-    let gender: TrainerGender
-    let age: TrainerAge
-    let style: TrainerStyle
-    let personality: TrainerPersonality
-    let specialization: TrainerSpecialization
+    var gender: TrainerGender
+    var age: TrainerAge
+    var style: TrainerStyle
+    var personality: TrainerPersonality
+    var specialization: TrainerSpecialization
 }
 
 enum TrainerGender: String, CaseIterable {
@@ -62,6 +62,7 @@ enum TrainerPersonality: String, CaseIterable {
     case supportive = "優しくサポート"
     case strict = "厳しく指導"
     case encouraging = "励ましてくれる"
+    case logical = "論理的にアドバイス"
     
     var description: String {
         switch self {
@@ -69,6 +70,7 @@ enum TrainerPersonality: String, CaseIterable {
         case .supportive: return "優しく寄り添いながらサポートしてくれます"
         case .strict: return "規律正しく、時には厳しく指導してくれます"
         case .encouraging: return "常に前向きな言葉で励ましてくれます"
+        case .logical: return "数値や根拠をもとに、論理的に改善ポイントを教えてくれます"
         }
     }
 }

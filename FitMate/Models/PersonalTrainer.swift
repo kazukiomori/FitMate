@@ -9,10 +9,9 @@ import UIKit
 struct PersonalTrainer {
     let id = UUID()
     var name: String
-    let preferences: TrainerPreferences
+    var preferences: TrainerPreferences
     let images: [UIImage]
     var image: UIImage? { images.first }
-    let motivationalMessages: [String]
     let createdAt: Date
     
     init(name: String, preferences: TrainerPreferences, images: [UIImage] = []) {
@@ -20,7 +19,6 @@ struct PersonalTrainer {
         self.preferences = preferences
         self.images = images
         self.createdAt = Date()
-        self.motivationalMessages = PersonalTrainer.generateMessages(for: preferences)
     }
 
     init(name: String, preferences: TrainerPreferences, image: UIImage? = nil) {
@@ -57,10 +55,18 @@ struct PersonalTrainer {
                 "着実に成果が出ていますよ",
                 "あなたの努力を応援しています！"
             ]
+        case .logical:
+            return [
+                "まずは現状を整理しましょう。今日の記録から改善点を一緒に見つけます",
+                "体重は短期で上下します。1週間平均で見ていきましょう",
+                "目標に対して、摂取と消費のバランスを数値で確認してみましょう",
+                "再現性のある習慣に落とし込むのが近道です。できることから順に行きましょう"
+            ]
         }
     }
     
     func getTodaysMessage() -> String {
+        let motivationalMessages = PersonalTrainer.generateMessages(for: preferences)
         let index = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
         return motivationalMessages[index % motivationalMessages.count]
     }

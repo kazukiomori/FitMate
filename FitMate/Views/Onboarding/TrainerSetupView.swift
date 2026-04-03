@@ -29,6 +29,8 @@ struct TrainerSetupView: View {
     private let swipeThreshold: CGFloat = 120
     private let maxVisibleCards = 3
 
+    private let selectablePersonalities: [TrainerPersonality] = [.encouraging, .strict, .logical]
+
     init(pendingTrainer: Binding<PersonalTrainer?>) {
         self._pendingTrainer = pendingTrainer
     }
@@ -85,6 +87,12 @@ struct TrainerSetupView: View {
 
     private func syncNameDraftFromPendingTrainer() {
         trainerNameDraft = pendingTrainer?.name ?? ""
+    }
+
+    private func setPendingTrainerPersonality(_ personality: TrainerPersonality) {
+        guard var trainer = pendingTrainer else { return }
+        trainer.preferences.personality = personality
+        pendingTrainer = trainer
     }
 
     private var genderFilterSection: some View {
@@ -183,6 +191,25 @@ struct TrainerSetupView: View {
                     TrainerCardImageCarousel(images: trainer.images)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("性格")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+                        FlexibleTagLayout {
+                            ForEach(selectablePersonalities, id: \.self) { personality in
+                                SelectableChip(
+                                    title: personalityChipTitle(for: personality),
+                                    isSelected: trainer.preferences.personality == personality
+                                ) {
+                                    setPendingTrainerPersonality(personality)
+                                }
+                            }
+                        }
+                        .tint(AoiOnboardingTheme.accent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("トレーナー名")
                             .font(.subheadline.weight(.semibold))
@@ -219,6 +246,19 @@ struct TrainerSetupView: View {
             Text("下のボタンで決定するか、別の候補を見るか選べます")
                 .font(.caption)
                 .foregroundColor(AoiOnboardingTheme.textSecondary)
+        }
+    }
+
+    private func personalityChipTitle(for personality: TrainerPersonality) -> String {
+        switch personality {
+        case .encouraging:
+            return "褒めてくれる"
+        case .strict:
+            return "クールで厳しい"
+        case .logical:
+            return "論理的"
+        default:
+            return personality.rawValue
         }
     }
 
