@@ -40,6 +40,10 @@ struct HomeView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
+                    if let trainer = user.personalTrainer {
+                        TrainerSupportBanner(trainer: trainer)
+                    }
+
                     // 今日の概要カード
                     VStack(spacing: 15) {
                         HStack {
@@ -134,6 +138,127 @@ struct HomeView: View {
         .onAppear {
             healthKitManager.fetchTodayHealthData()
         }
+    }
+}
+
+private struct TrainerSupportBanner: View {
+    let trainer: PersonalTrainer
+
+    var body: some View {
+        HStack(spacing: 16) {
+            trainerImage
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("今日のひとこと")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.pink)
+
+                        Text(trainer.name.isEmpty ? "あなたのトレーナー" : trainer.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "sun.max.fill")
+                        .font(.title3)
+                        .foregroundColor(.orange)
+                        .padding(8)
+                        .background(Color.orange.opacity(0.12))
+                        .clipShape(Circle())
+                }
+
+                Text("「\(trainer.getTodaysMessage())」")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color(red: 1.0, green: 0.97, blue: 0.92))
+
+                            TrainerSpeechBubbleTail()
+                                .fill(Color(red: 1.0, green: 0.97, blue: 0.92))
+                                .frame(width: 14, height: 18)
+                                .offset(x: -8, y: 8)
+                        }
+                    )
+
+                Text("毎日あなたに合わせて応援します")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(18)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white,
+                    Color(red: 1.0, green: 0.98, blue: 0.95)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.orange.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
+    }
+
+    private var trainerImage: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(red: 0.98, green: 0.94, blue: 0.95))
+
+            if let image = trainer.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .padding(8)
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: "person.crop.rectangle")
+                        .font(.system(size: 34))
+                        .foregroundColor(.pink.opacity(0.7))
+
+                    Text("Trainer")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .frame(width: 112, height: 150)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.9), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+    }
+}
+
+private struct TrainerSpeechBubbleTail: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX, y: rect.midY),
+            control: CGPoint(x: rect.midX, y: rect.minY)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.maxY),
+            control: CGPoint(x: rect.midX, y: rect.maxY)
+        )
+        path.closeSubpath()
+        return path
     }
 }
 
