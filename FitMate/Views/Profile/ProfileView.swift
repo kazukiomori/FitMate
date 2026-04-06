@@ -48,6 +48,13 @@ struct ProfileView: View {
                             Text("目標を修正")
                         }
                     }
+
+                    NavigationLink(destination: TrainerSelectionSettingsView().environmentObject(user)) {
+                        HStack {
+                            Image(systemName: "person.crop.rectangle")
+                            Text("トレーナーを選び直す")
+                        }
+                    }
                     
                     HStack {
                         Image(systemName: "bell")
@@ -67,5 +74,84 @@ struct ProfileView: View {
             }
             .navigationTitle("プロフィール")
         }
+    }
+}
+
+private struct TrainerSelectionSettingsView: View {
+    @EnvironmentObject var user: User
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var pendingTrainer: PersonalTrainer?
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                if let trainer = user.personalTrainer {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("現在のトレーナー")
+                            .font(.headline)
+
+                        HStack(spacing: 14) {
+                            currentTrainerImage(for: trainer)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(trainer.name.isEmpty ? "あなたのトレーナー" : trainer.name)
+                                    .font(.headline)
+
+                                Text(trainer.preferences.personality.description)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(16)
+                    .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+                }
+
+                TrainerSetupView(
+                    pendingTrainer: $pendingTrainer,
+                    allowsReplacingExistingTrainer: true
+                )
+                .environmentObject(user)
+            }
+            .padding()
+        }
+        .background(Color.gray.opacity(0.08))
+        .navigationTitle("トレーナー設定")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("保存") {
+                    guard let pendingTrainer else { return }
+                    user.setPersonalTrainer(pendingTrainer)
+                    dismiss()
+                }
+                .disabled(pendingTrainer == nil)
+            }
+        }
+    }
+
+    private func currentTrainerImage(for trainer: PersonalTrainer) -> some View {
+        Group {
+            if let image = trainer.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.12))
+                    .overlay(
+                        Image(systemName: "person.crop.rectangle")
+                            .foregroundColor(.secondary)
+                    )
+            }
+        }
+        .frame(width: 72, height: 96)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
