@@ -15,10 +15,14 @@ struct PersonalTrainer {
     let createdAt: Date
     
     init(name: String, preferences: TrainerPreferences, images: [UIImage] = []) {
+        self.init(name: name, preferences: preferences, images: images, createdAt: Date())
+    }
+
+    init(name: String, preferences: TrainerPreferences, images: [UIImage] = [], createdAt: Date) {
         self.name = name
         self.preferences = preferences
         self.images = images
-        self.createdAt = Date()
+        self.createdAt = createdAt
     }
 
     init(name: String, preferences: TrainerPreferences, image: UIImage? = nil) {
@@ -69,5 +73,22 @@ struct PersonalTrainer {
         let motivationalMessages = PersonalTrainer.generateMessages(for: preferences)
         let index = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
         return motivationalMessages[index % motivationalMessages.count]
+    }
+
+    func getHomeMessage(isFirstOpenToday: Bool) -> String {
+        guard isFirstOpenToday else {
+            return getTodaysMessage()
+        }
+
+        switch preferences.personality {
+        case .encouraging, .supportive:
+            return "今日もアプリを開いてくれてありがとう。昨日のあなたより、ちゃんと前に進めていますよ"
+        case .strict:
+            return "今日も開いてくれてありがとうございます。まずは記録から始めましょう。継続が結果を作ります"
+        case .logical:
+            return "今日もアプリを開いてくれてありがとうございます。まずは今日の状態を確認して、やることを整理していきましょう"
+        case .motivational:
+            return "今日もアプリを開いてくれてありがとう。この一回が理想の自分に近づく一歩です"
+        }
     }
 }

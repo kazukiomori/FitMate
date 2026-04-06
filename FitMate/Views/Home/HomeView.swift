@@ -8,7 +8,9 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var user: User
     @EnvironmentObject var recordViewModel: RecordViewModel
+    @AppStorage("lastHomeOpenedDayKey") private var lastHomeOpenedDayKey: String = ""
     @StateObject private var healthKitManager = HealthKitManager()
+    @State private var isFirstHomeOpenToday = false
     @State private var targetCalories = 1800
 
     private let today: Date = Calendar.current.startOfDay(for: Date())
@@ -35,13 +37,28 @@ struct HomeView: View {
         formatter.timeStyle = .none
         return formatter
     }
+
+    private var dayKeyFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }
+
+    private var todayDayKey: String {
+        dayKeyFormatter.string(from: Date())
+    }
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
                     if let trainer = user.personalTrainer {
-                        TrainerSupportBanner(trainer: trainer)
+                        TrainerSupportBanner(
+                            trainer: trainer,
+                            isFirstOpenToday: isFirstHomeOpenToday
+                        )
                     }
 
                     // 今日の概要カード
@@ -137,12 +154,30 @@ struct HomeView: View {
         }
         .onAppear {
             healthKitManager.fetchTodayHealthData()
+            updateHomeOpenState()
+        }
+    }
+
+    private func updateHomeOpenState() {
+        isFirstHomeOpenToday = lastHomeOpenedDayKey != todayDayKey
+
+        if isFirstHomeOpenToday {
+            lastHomeOpenedDayKey = todayDayKey
         }
     }
 }
 
 private struct TrainerSupportBanner: View {
     let trainer: PersonalTrainer
+    let isFirstOpenToday: Bool
+
+    private var bannerMessage: String {
+        trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
+    }
+
+    private var badgeTitle: String {
+        isFirstOpenToday ? "今日のあいさつ" : "今日のひとこと"
+    }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -151,7 +186,7 @@ private struct TrainerSupportBanner: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("今日のひとこと")
+                        Text(badgeTitle)
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.pink)
@@ -171,7 +206,7 @@ private struct TrainerSupportBanner: View {
                         .clipShape(Circle())
                 }
 
-                Text("「\(trainer.getTodaysMessage())」")
+                Text("「\(bannerMessage)」")
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)

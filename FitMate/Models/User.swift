@@ -4,8 +4,28 @@
 //
 
 import SwiftUI
+import UIKit
 
 class User: ObservableObject {
+    private enum StorageKeys {
+        static let personalTrainer = "storedPersonalTrainer"
+    }
+
+    private struct PersistedTrainer: Codable {
+        let name: String
+        let preferences: PersistedTrainerPreferences
+        let imagesData: [Data]
+        let createdAt: Date
+    }
+
+    private struct PersistedTrainerPreferences: Codable {
+        let gender: String
+        let age: String
+        let style: String
+        let personality: String
+        let specialization: String
+    }
+
     @Published var name: String = ""
     @Published var age: Int = 25
     @Published var currentWeight: Double = 70.0
@@ -19,6 +39,10 @@ class User: ObservableObject {
     // パーソナルトレーナー関連
     @Published var personalTrainer: PersonalTrainer?
     @Published var hasCompletedTrainerSetup: Bool = false
+
+    init() {
+        restorePersonalTrainerIfNeeded()
+    }
 
     // MARK: - Calories (Mifflin-St Jeor)
 
@@ -95,10 +119,68 @@ class User: ObservableObject {
     func setPersonalTrainer(_ trainer: PersonalTrainer) {
         personalTrainer = trainer
         hasCompletedTrainerSetup = true
+        persistPersonalTrainer(trainer)
     }
 
     func clearPersonalTrainer() {
         personalTrainer = nil
         hasCompletedTrainerSetup = false
+        UserDefaults.standard.removeObject(forKey: StorageKeys.personalTrainer)
+    }
+
+    private func persistPersonalTrainer(_ trainer: PersonalTrainer) {
+        let persistedTrainer = PersistedTrainer(
+            name: trainer.name,
+            preferences: PersistedTrainerPreferences(
+                gender: trainer.preferences.gender.rawValue,
+                age: trainer.preferences.age.rawValue,
+                style: trainer.preferences.style.rawValue,
+                personality: trainer.preferences.personality.rawValue,
+                specialization: trainer.preferences.specialization.rawValue
+            ),
+            imagesData: trainer.images.compactMap { image in
+                image.jpegData(compressionQuality: 0.92) ?? image.pngData()
+            },
+            createdAt: trainer.createdAt
+        )
+
+        guard let data = try? JSONEncoder().encode(persistedTrainer) else { return }
+        UserDefaults.standard.set(data, forKey: StorageKeys.personalTrainer)
+    }
+
+    private func restorePersonalTrainerIfNeeded() {
+        guard let data = UserDefaults.standard.data(forKey: StorageKeys.personalTrainer),
+              let persistedTrainer = try? JSONDecoder().decode(PersistedTrainer.self, from: data),
+              let preferences = restoredPreferences(from: persistedTrainer.preferences) else {
+            return
+        }
+
+        let restoredImages = persistedTrainer.imagesData.compactMap(UIImage.init(data:))
+
+        personalTrainer = PersonalTrainer(
+            name: persistedTrainer.name,
+            preferences: preferences,
+            images: restoredImages,
+            createdAt: persistedTrainer.createdAt
+        )
+        hasCompletedTrainerSetup = true
+    }
+
+    private func restoredPreferences(from persisted: PersistedTrainerPreferences) -> TrainerPreferences? {
+        guard let gender = TrainerGender(rawValue: persisted.gender),
+              let age = TrainerAge(rawValue: persisted.age),
+              let style = TrainerStyle(rawValue: persisted.style),
+              let personality = TrainerPersonality(rawValue: persisted.personality),
+              let specialization = TrainerSpecialization(rawValue: persisted.specialization) else {
+            return nil
+        }
+
+        return TrainerPreferences(
+            gender: gender,
+            age: age,
+            style: style,
+            personality: personality,
+            specialization: specialization
+        )
     }
 }

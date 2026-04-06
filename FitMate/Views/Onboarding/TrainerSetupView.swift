@@ -28,11 +28,16 @@ struct TrainerSetupView: View {
 
     private let swipeThreshold: CGFloat = 120
     private let maxVisibleCards = 3
+    private let allowsReplacingExistingTrainer: Bool
 
     private let selectablePersonalities: [TrainerPersonality] = [.encouraging, .strict, .logical]
 
-    init(pendingTrainer: Binding<PersonalTrainer?>) {
+    init(
+        pendingTrainer: Binding<PersonalTrainer?>,
+        allowsReplacingExistingTrainer: Bool = false
+    ) {
         self._pendingTrainer = pendingTrainer
+        self.allowsReplacingExistingTrainer = allowsReplacingExistingTrainer
     }
 
     var body: some View {
@@ -43,7 +48,7 @@ struct TrainerSetupView: View {
                     subtitle: "カードを左右にスワイプして選びましょう。\n右スワイプでLikeすると専属トレーナーに設定されます。"
                 )
 
-                if user.personalTrainer != nil {
+                if user.personalTrainer != nil && !allowsReplacingExistingTrainer {
                     dedicatedTrainerCard
                 } else if pendingTrainer != nil {
                     pendingConfirmationCard
