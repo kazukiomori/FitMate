@@ -23,6 +23,7 @@ struct FoodAddView: View {
     @State private var isShowingRecognitionResults = false
     @State private var isLookingUpBarcode = false
     @State private var barcodeStatusMessage: String?
+    @State private var showingBarcodeLookupFailureAlert = false
     @Environment(\.presentationMode) var presentationMode
 
     // 栄養素自動取得用
@@ -233,6 +234,11 @@ struct FoodAddView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
             )
+            .alert("商品を特定できませんでした", isPresented: $showingBarcodeLookupFailureAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("バーコードから商品が特定できませんでした")
+            }
             // 認識結果シート
             .sheet(isPresented: $isShowingRecognitionResults) {
                 recognitionResultsSheet()
@@ -320,9 +326,15 @@ struct FoodAddView: View {
         do {
             let product = try await BarcodeProductAPI.fetchProduct(barcode: barcode)
 
-            if let name = product.name, !name.isEmpty {
-                foodName = name
+            guard let name = product.name, !name.isEmpty else {
+                barcodeStatusMessage = nil
+                showingBarcodeLookupFailureAlert = true
+                return
             }
+
+            foodName = name
+
+            let hasBarcodeNutrition = product.caloriesKcal != nil || product.proteinG != nil || product.fatG != nil || product.carbsG != nil
 
             if let caloriesValue = product.caloriesKcal {
                 calories = String(Int(caloriesValue.rounded()))
@@ -332,13 +344,22 @@ struct FoodAddView: View {
                 fetchedNutrition = nutrition
             }
 
-            if product.name != nil || product.caloriesKcal != nil {
+            if hasBarcodeNutrition {
                 barcodeStatusMessage = "バーコードから商品情報を取得しました"
             } else {
-                barcodeStatusMessage = "商品は見つかりましたが、表示できる栄養情報が不足していました"
+                await nutritionVM.search(query: name)
+
+                if let response = nutritionVM.result {
+                    calories = String(Int(response.calories_kcal.rounded()))
+                    fetchedNutrition = response
+                    barcodeStatusMessage = "商品名から栄養情報を補完しました"
+                } else {
+                    barcodeStatusMessage = "商品名は取得できましたが、栄養情報は取得できませんでした"
+                }
             }
         } catch {
-            barcodeStatusMessage = "バーコードから商品情報の取得に失敗しました"
+            barcodeStatusMessage = nil
+            showingBarcodeLookupFailureAlert = true
         }
     }
     
