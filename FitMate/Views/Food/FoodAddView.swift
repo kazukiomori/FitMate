@@ -18,8 +18,11 @@ struct FoodAddView: View {
     @State private var imageRecognitionMode: RecognitionMode?
     @State private var selectedImage: UIImage?
     @State private var showingLiveCameraOCR = false
+    @State private var showingBarcodeScanner = false
     @State private var showingRecognitionActionSheet = false
     @State private var isShowingRecognitionResults = false
+    @State private var isLookingUpBarcode = false
+    @State private var barcodeStatusMessage: String?
     @Environment(\.presentationMode) var presentationMode
 
     // 栄養素自動取得用
@@ -42,6 +45,9 @@ struct FoodAddView: View {
                     imageRecognitionMode = .api
                     imageSourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
                     showingImagePicker = true
+                },
+                .default(Text("バーコード読み取り")) {
+                    showingBarcodeScanner = true
                 },
                 .cancel()
             ]
@@ -111,6 +117,12 @@ struct FoodAddView: View {
                     .font(.caption)
             }
 
+            if let barcodeStatusMessage {
+                Text(barcodeStatusMessage)
+                    .foregroundColor(barcodeStatusMessage.contains("失敗") ? .red : .secondary)
+                    .font(.caption)
+            }
+
             TextField("カロリー (kcal)", text: $calories)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .keyboardType(.numberPad)
@@ -175,6 +187,15 @@ struct FoodAddView: View {
                             .foregroundColor(.gray)
                     }
                 }
+
+                if isLookingUpBarcode {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("商品情報を取得中...")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
                 
                 // フォーム
                 formSection()
@@ -219,6 +240,13 @@ struct FoodAddView: View {
             // カメラOCR
             .sheet(isPresented: $showingLiveCameraOCR) {
                 LiveCameraOCRView(viewModel: ocrViewModel)
+            }
+            .sheet(isPresented: $showingBarcodeScanner) {
+                BarcodeScannerSheetView { barcode in
+                    Task {
+                        await handleDetectedBarcode(barcode)
+                    }
+                }
             }
             // OCR/ラベル認識反映
             .onChange(of: ocrViewModel.calorieValue) { newValue in
@@ -281,6 +309,37 @@ struct FoodAddView: View {
         foodName = result.label
         let estimatedCalories = visionMenuVM.estimateCalories(for: result.label)
         calories = String(estimatedCalories)
+    }
+
+    @MainActor
+    private func handleDetectedBarcode(_ barcode: String) async {
+        isLookingUpBarcode = true
+        barcodeStatusMessage = nil
+        defer { isLookingUpBarcode = false }
+
+        do {
+            let product = try await BarcodeProductAPI.fetchProduct(barcode: barcode)
+
+            if let name = product.name, !name.isEmpty {
+                foodName = name
+            }
+
+            if let caloriesValue = product.caloriesKcal {
+                calories = String(Int(caloriesValue.rounded()))
+            }
+
+            if let nutrition = product.asNutritionResponse {
+                fetchedNutrition = nutrition
+            }
+
+            if product.name != nil || product.caloriesKcal != nil {
+                barcodeStatusMessage = "バーコードから商品情報を取得しました"
+            } else {
+                barcodeStatusMessage = "商品は見つかりましたが、表示できる栄養情報が不足していました"
+            }
+        } catch {
+            barcodeStatusMessage = "バーコードから商品情報の取得に失敗しました"
+        }
     }
     
     @MainActor

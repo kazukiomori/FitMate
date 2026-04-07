@@ -275,8 +275,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "食事の写真を撮影してAIで解析するためにカメラを使用します";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "食事の写真を選択してAIで解析するために写真ライブラリを使用します";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "健康データを取得してダイエットをサポートします";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "食事の写真を選択してAIで解析するために写真ライブラリを使用します";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -309,8 +309,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "食事の写真を撮影してAIで解析するためにカメラを使用します";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "食事の写真を選択してAIで解析するために写真ライブラリを使用します";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "健康データを取得してダイエットをサポートします";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "食事の写真を選択してAIで解析するために写真ライブラリを使用します";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
