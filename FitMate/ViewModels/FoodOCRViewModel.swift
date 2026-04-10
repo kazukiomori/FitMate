@@ -16,6 +16,14 @@ final class FoodOCRViewModel: ObservableObject {
     
     private let ocrService = VisionTextRecognitionService()
     private let calorieService = CalorieExtractionService()
+
+    func reset() {
+        capturedImage = nil
+        recognizedText = ""
+        calorieValue = nil
+        isProcessing = false
+        errorMessage = nil
+    }
     
     func analyze(image: UIImage) {
         Task {

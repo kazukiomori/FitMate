@@ -38,8 +38,9 @@ struct FoodAddView: View {
         ActionSheet(
             title: Text("認識方法を選択"),
             buttons: [
-                .default(Text("カロリー自動読取 (OCR)")) {
+                .default(Text("カロリー自動読取")) {
                     imageRecognitionMode = .ocr
+                    ocrViewModel.reset()
                     showingLiveCameraOCR = true
                 },
                 .default(Text("写真認識 (AI)")) {
@@ -258,6 +259,7 @@ struct FoodAddView: View {
             .onChange(of: ocrViewModel.calorieValue) { newValue in
                 if let kcal = newValue {
                     calories = String(kcal)
+                    showingLiveCameraOCR = false
                 }
             }
             .onChange(of: ocrViewModel.recognizedText) { newText in

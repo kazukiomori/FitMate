@@ -6,116 +6,151 @@ struct LiveCameraOCRView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var cameraModel = CameraModel()
     @ObservedObject var viewModel: FoodOCRViewModel   // 外から注入
+
+    private let ocrService = VisionTextRecognitionService()
+    private let calorieService = CalorieExtractionService()
+    private let guideRegionOfInterest = CGRect(x: 0.16, y: 0.40, width: 0.68, height: 0.19)
+
+    @State private var isAnalyzingFrame = false
+    @State private var lastAnalysisDate: Date = .distantPast
     
     var body: some View {
         ZStack {
-            // カメラプレビュー
             CameraPreview(session: cameraModel.session)
                 .ignoresSafeArea()
                 .onAppear {
+                    cameraModel.onFrame = { cgImage in
+                        handleIncomingFrame(cgImage)
+                    }
                     cameraModel.configure()
                 }
                 .onDisappear {
+                    cameraModel.onFrame = nil
                     cameraModel.stopSession()
                 }
             
-            // 黄色のガイド枠（目安として残す）
-            GeometryReader { geo in
-                let guideRect = CGRect(
-                    x: geo.size.width * 0.1,
-                    y: geo.size.height * 0.3,
-                    width: geo.size.width * 0.8,
-                    height: geo.size.height * 0.2
-                )
-                Path { path in
-                    path.addRect(guideRect)
-                }
-                .stroke(Color.yellow, lineWidth: 3)
-            }
-            .allowsHitTesting(false)
-            
             VStack {
-                Spacer()
-                
-                // 撮影した画像のプレビュー
-                if let image = viewModel.capturedImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 180)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .padding(.horizontal)
+                HStack {
+                    Spacer()
+
+                    Button("閉じる") {
+                        dismiss()
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
                 }
-                
-                // 認識テキスト & カロリー表示
-                VStack(alignment: .leading) {
+                .padding(.horizontal)
+                .padding(.top, 12)
+
+                Spacer()
+
+                VStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white, lineWidth: 3)
+                        .frame(width: 260, height: 160)
+                        .overlay(
+                            Text("カロリー表示を枠内に合わせてください")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.black.opacity(0.35))
+                                .clipShape(Capsule())
+                                .offset(y: 118)
+                        )
+
                     if viewModel.isProcessing {
                         HStack {
                             ProgressView()
                             Text("解析中...")
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.white)
                                 .bold()
                         }
-                        .padding(.bottom, 8)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.45))
+                        .clipShape(Capsule())
                     } else {
-                        if !viewModel.recognizedText.isEmpty {
-                            Text("認識テキスト:")
+                        Text("枠に合わせると自動で解析します")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.35))
+                            .clipShape(Capsule())
+
+                        if let kcal = viewModel.calorieValue {
+                            Text("\(kcal) kcal を検出しました")
                                 .font(.headline)
-                                .padding(.top, 8)
-                            
-                            ScrollView {
-                                Text(viewModel.recognizedText)
-                                    .padding(.bottom, 4)
-                            }
-                            .frame(maxHeight: 100)
-                            
-                            if let kcal = viewModel.calorieValue {
-                                Text("抽出カロリー: \(kcal) kcal")
-                                    .font(.headline)
-                                    .foregroundColor(.orange)
-                                    .padding(.bottom, 8)
-                            }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.orange.opacity(0.85))
+                                .clipShape(Capsule())
                         }
-                        
+
                         if let error = viewModel.errorMessage {
                             Text(error)
-                                .foregroundColor(.red)
+                                .foregroundColor(.white)
                                 .font(.caption)
-                                .padding(.bottom, 8)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.red.opacity(0.7))
+                                .clipShape(Capsule())
                         }
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .background(Color.black.opacity(0.5))
-                .cornerRadius(10)
-                .padding(.horizontal)
-                
-                // 撮影＋解析ボタン
-                Button(action: {
-                    guard !viewModel.isProcessing else { return }
-                    cameraModel.capturePhoto { image in
-                        guard let image = image else { return }
-                        viewModel.analyze(image: image)
+                Spacer()
+
+                Color.clear.frame(height: 20)
+            }
+        }
+    }
+
+    private func handleIncomingFrame(_ cgImage: CGImage) {
+        Task {
+            let shouldAnalyze = await MainActor.run { () -> Bool in
+                let now = Date()
+                guard !isAnalyzingFrame,
+                      !viewModel.isProcessing,
+                      viewModel.calorieValue == nil,
+                      now.timeIntervalSince(lastAnalysisDate) > 0.7 else { return false }
+
+                isAnalyzingFrame = true
+                lastAnalysisDate = now
+                viewModel.isProcessing = true
+                viewModel.errorMessage = nil
+                return true
+            }
+
+            guard shouldAnalyze else { return }
+
+            defer {
+                Task { @MainActor in
+                    self.isAnalyzingFrame = false
+                    self.viewModel.isProcessing = false
+                }
+            }
+
+            do {
+                let text = try await ocrService.recognizeText(in: cgImage, regionOfInterest: guideRegionOfInterest)
+                let detectedCalories = calorieService.extractCalories(from: text)
+
+                await MainActor.run {
+                    viewModel.recognizedText = text
+                    if let detectedCalories {
+                        viewModel.calorieValue = detectedCalories
                     }
-                }) {
-                    Text("解析する")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(viewModel.isProcessing ? Color.gray : Color.yellow)
-                        .foregroundColor(.black)
-                        .cornerRadius(10)
-                        .padding(.horizontal)
                 }
-                .disabled(viewModel.isProcessing)
-                .padding(.bottom, 8)
-                
-                // 閉じるボタン（任意）
-                Button("閉じる") {
-                    dismiss()
+            } catch {
+                await MainActor.run {
+                    if viewModel.calorieValue == nil {
+                        viewModel.recognizedText = ""
+                    }
                 }
-                .foregroundColor(.white)
-                .padding(.bottom, 20)
             }
         }
     }

@@ -5,18 +5,31 @@
 import Foundation
 import AVFoundation
 import UIKit
+import CoreImage
 
-class CameraModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
+class CameraModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate {
     let session = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
+    private let videoOutput = AVCaptureVideoDataOutput()
+    private let ciContext = CIContext()
+    private let sampleBufferQueue = DispatchQueue(label: "camera.sample.buffer.queue")
+    private var isConfigured = false
     
     private var onCapture: ((UIImage?) -> Void)?
+    var onFrame: ((CGImage) -> Void)?
     
     override init() {
         super.init()
     }
     
     func configure() {
+        guard !isConfigured else {
+            if !session.isRunning {
+                session.startRunning()
+            }
+            return
+        }
+
         session.beginConfiguration()
         session.sessionPreset = .photo
         
@@ -33,8 +46,18 @@ class CameraModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         if session.canAddOutput(photoOutput) {
             session.addOutput(photoOutput)
         }
+
+        if session.canAddOutput(videoOutput) {
+            videoOutput.alwaysDiscardsLateVideoFrames = true
+            videoOutput.videoSettings = [
+                kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)
+            ]
+            videoOutput.setSampleBufferDelegate(self, queue: sampleBufferQueue)
+            session.addOutput(videoOutput)
+        }
         
         session.commitConfiguration()
+        isConfigured = true
         session.startRunning()
     }
     
@@ -66,6 +89,17 @@ class CameraModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         
         onCapture?(image)  // ★ フル画像そのまま返す
         onCapture = nil
+    }
+
+    func captureOutput(_ output: AVCaptureOutput,
+                       didOutput sampleBuffer: CMSampleBuffer,
+                       from connection: AVCaptureConnection) {
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else { return }
+
+        onFrame?(cgImage)
     }
 }
 

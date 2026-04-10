@@ -17,8 +17,12 @@ final class VisionTextRecognitionService {
         guard let cgImage = image.cgImage else {
             throw OCRServiceError.cgImageMissing
         }
-        
-        return try await withCheckedThrowingContinuation { continuation in
+
+        return try await recognizeText(in: cgImage)
+    }
+
+    func recognizeText(in cgImage: CGImage, regionOfInterest: CGRect? = nil) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
                 if let error = error {
                     continuation.resume(throwing: error)
@@ -28,23 +32,30 @@ final class VisionTextRecognitionService {
                     continuation.resume(throwing: OCRServiceError.noText)
                     return
                 }
-                
+
                 let strings = observations.compactMap {
                     $0.topCandidates(1).first?.string
                 }
                 let fullText = strings
                     .joined(separator: "\n")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                continuation.resume(returning: fullText)
+
+                if fullText.isEmpty {
+                    continuation.resume(throwing: OCRServiceError.noText)
+                } else {
+                    continuation.resume(returning: fullText)
+                }
             }
-            
+
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = false
             request.revision = VNRecognizeTextRequestRevision3
             request.automaticallyDetectsLanguage = false
             request.recognitionLanguages = ["ja-JP", "en-US"]
-            
+            if let regionOfInterest {
+                request.regionOfInterest = regionOfInterest
+            }
+
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
