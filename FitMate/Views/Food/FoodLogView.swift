@@ -20,6 +20,10 @@ struct FoodLogView: View {
             .foodEntries ?? []
     }
 
+    private var allHistoryEntries: [FoodEntry] {
+        recordViewModel.foodEntries.sorted { $0.time > $1.time }
+    }
+
     var body: some View {
         NavigationView {
             List {
@@ -58,6 +62,19 @@ struct FoodLogView: View {
                     }
                 } header: {
                     Text("\(selectedMeal.title)の記録")
+                }
+
+                Section {
+                    if allHistoryEntries.isEmpty {
+                        Text("履歴がありません")
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(allHistoryEntries) { entry in
+                            FoodHistoryEntryRow(entry: entry)
+                        }
+                    }
+                } header: {
+                    Text("食事履歴")
                 }
             }
             .listStyle(.plain)
@@ -301,6 +318,50 @@ struct FoodEntryRow: View {
             Text(timeFormatter.string(from: entry.time))
                 .font(.caption)
                 .foregroundColor(.gray)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct FoodHistoryEntryRow: View {
+    let entry: FoodEntry
+
+    private var dateTimeFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(entry.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    Text(entry.mealType.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+
+                Text("\(entry.calories)kcal")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            Text(dateTimeFormatter.string(from: entry.time))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.trailing)
         }
         .padding(.vertical, 4)
     }
