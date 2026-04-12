@@ -5,11 +5,12 @@
 
 import SwiftUI
 import UIKit
+import Charts
 
 struct ProgressChartView: View {
     @EnvironmentObject var recordViewModel: RecordViewModel
     @State private var showingWeightInput = false
-    @State private var selectedTimeRange = TimeRange.month
+    @State private var selectedTimeRange = TimeRange.week
     
     enum TimeRange: String, CaseIterable {
         case week = "1週間"
@@ -33,24 +34,14 @@ struct ProgressChartView: View {
                     ProgressSummaryCard(recordViewModel: recordViewModel)
                     
                     // 期間選択
-                    Picker("期間", selection: $selectedTimeRange) {
-                        ForEach(TimeRange.allCases, id: \.self) { range in
-                            Text(range.rawValue).tag(range)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal)
+                    ProgressRangePicker(selectedTimeRange: $selectedTimeRange)
+                        .padding(.horizontal)
                     
                     // 体重グラフ
                     WeightChartView(
                         weightEntries: recordViewModel.weightEntries,
                         timeRange: selectedTimeRange
                     )
-                    .frame(height: 300)
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(15)
-                    .shadow(radius: 5)
                     .padding(.horizontal)
                     
                     // 最近の記録
@@ -68,8 +59,40 @@ struct ProgressChartView: View {
             .sheet(isPresented: $showingWeightInput) {
                 WeightInputView(recordViewModel: recordViewModel)
             }
-            .background(Color.gray.opacity(0.1))
+            .background(Color(.systemGray6))
         }
+    }
+}
+
+struct ProgressRangePicker: View {
+    @Binding var selectedTimeRange: ProgressChartView.TimeRange
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(ProgressChartView.TimeRange.allCases, id: \.self) { range in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedTimeRange = range
+                    }
+                } label: {
+                    Text(range.rawValue)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(selectedTimeRange == range ? .white : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            Capsule()
+                                .fill(selectedTimeRange == range ? Color(red: 0.12, green: 0.84, blue: 0.80) : .clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(6)
+        .background(Color.white)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.04), radius: 12, y: 6)
     }
 }
 
@@ -129,43 +152,54 @@ struct ProgressSummaryCard: View {
 }
 
 struct WeightChartView: View {
+    @EnvironmentObject var user: User
     let weightEntries: [WeightEntry]
     let timeRange: ProgressChartView.TimeRange
-    
+
+    private struct ChartPoint: Identifiable {
+        let date: Date
+        let weight: Double
+        let isRecorded: Bool
+
+        var id: Date { date }
+    }
+
     private var calendar: Calendar {
         var cal = Calendar.current
         cal.locale = Locale(identifier: "ja_JP")
-        // 週の左端を月曜にする
-        cal.firstWeekday = 2
-        cal.minimumDaysInFirstWeek = 1
         return cal
     }
-    
+
     private var referenceDate: Date {
         calendar.startOfDay(for: Date())
     }
-    
-    private func dateSlots() -> [Date] {
+
+    private var chartDateRange: ClosedRange<Date> {
+        let end = referenceDate
+        let start: Date
+
         switch timeRange {
         case .week:
-            let start = calendar.dateInterval(of: .weekOfYear, for: referenceDate)?.start ?? referenceDate
-            return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+            start = calendar.date(byAdding: .day, value: -6, to: end) ?? end
         case .month:
-            let interval = calendar.dateInterval(of: .month, for: referenceDate)
-            let start = interval?.start ?? referenceDate
-            let endExclusive = interval?.end ?? calendar.date(byAdding: .month, value: 1, to: start) ?? start
-            let last = calendar.date(byAdding: .day, value: -1, to: endExclusive) ?? start
-            let days = calendar.dateComponents([.day], from: start, to: last).day ?? 0
-            return (0...max(days, 0)).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+            start = calendar.date(byAdding: .day, value: -29, to: end) ?? end
         case .threeMonths:
-            let end = referenceDate
-            let start = calendar.startOfDay(for: calendar.date(byAdding: .month, value: -3, to: end) ?? end)
-            let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
-            return (0...max(days, 0)).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+            start = calendar.date(byAdding: .month, value: -3, to: end) ?? end
+        }
+
+        return calendar.startOfDay(for: start)...end
+    }
+
+    private var dateSlots: [Date] {
+        let start = chartDateRange.lowerBound
+        let end = chartDateRange.upperBound
+        let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+        return (0...max(days, 0)).compactMap {
+            calendar.date(byAdding: .day, value: $0, to: start)
         }
     }
-    
-    private func latestEntryByDay() -> [Date: WeightEntry] {
+
+    private var latestEntryByDay: [Date: WeightEntry] {
         let grouped = Dictionary(grouping: weightEntries) { entry in
             calendar.startOfDay(for: entry.date)
         }
@@ -173,166 +207,217 @@ struct WeightChartView: View {
             entries.max { $0.date < $1.date }
         }
     }
-    
-    private func tickIndices(for slots: [Date]) -> [Int] {
-        guard !slots.isEmpty else { return [] }
-        let lastIndex = slots.count - 1
-        
-        switch timeRange {
-        case .week:
-            return Array(0...lastIndex)
-        case .month:
-            // 1日/8日/15日/22日/最終日 を基本に、範囲内に丸める
-            let candidates = [0, 7, 14, 21, lastIndex]
-            return Array(Set(candidates.map { min(max($0, 0), lastIndex) })).sorted()
-        case .threeMonths:
-            var indices: [Int] = [0, lastIndex]
-            for (idx, date) in slots.enumerated() {
-                let day = calendar.component(.day, from: date)
-                if day == 1 { indices.append(idx) }
+
+    private var chartPoints: [ChartPoint] {
+        let sortedDays = latestEntryByDay.keys.sorted()
+        var lastKnownWeight: Double?
+
+        if let previousDay = sortedDays.last(where: { $0 < chartDateRange.lowerBound }) {
+            lastKnownWeight = latestEntryByDay[previousDay]?.weight
+        }
+
+        return dateSlots.compactMap { day in
+            let normalized = calendar.startOfDay(for: day)
+
+            if let entry = latestEntryByDay[normalized] {
+                lastKnownWeight = entry.weight
+                return ChartPoint(date: normalized, weight: entry.weight, isRecorded: true)
             }
-            return Array(Set(indices)).sorted()
+
+            guard let lastKnownWeight else { return nil }
+            return ChartPoint(date: normalized, weight: lastKnownWeight, isRecorded: false)
         }
     }
-    
-    private func label(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ja_JP")
-        
+
+    private var recordedPointsInRange: [ChartPoint] {
+        chartPoints.filter(\.isRecorded)
+    }
+
+    private var xAxisDates: [Date] {
         switch timeRange {
         case .week:
-            formatter.dateFormat = "M/d(EEE)"
+            return dateSlots
         case .month:
-            formatter.dateFormat = "d"
+            let stride = [0, 5, 10, 15, 20, 25, 29]
+            return stride.compactMap { index in
+                guard dateSlots.indices.contains(index) else { return nil }
+                return dateSlots[index]
+            }
         case .threeMonths:
-            formatter.dateFormat = "M/d"
+            let monthStarts = dateSlots.filter { calendar.component(.day, from: $0) == 1 }
+            let allDates = ([chartDateRange.lowerBound] + monthStarts + [chartDateRange.upperBound]).sorted()
+            return Array(NSOrderedSet(array: allDates)) as? [Date] ?? allDates
         }
-        return formatter.string(from: date)
     }
-    
+
+    private var yDomain: ClosedRange<Double> {
+        let values = chartPoints.map(\.weight) + [user.targetWeight]
+        guard let minValue = values.min(), let maxValue = values.max() else {
+            let center = user.currentWeight
+            return (center - 5)...(center + 5)
+        }
+
+        let spread = max(maxValue - minValue, 2.0)
+        let padding = max(spread * 0.18, 1.0)
+        return (minValue - padding)...(maxValue + padding)
+    }
+
+    private var yAxisValues: [Double] {
+        let lower = yDomain.lowerBound
+        let upper = yDomain.upperBound
+        let middle = (lower + upper) / 2
+        return [upper, middle, lower]
+    }
+
+    private var latestDisplayedWeight: Double? {
+        chartPoints.last?.weight
+    }
+
+    @ViewBuilder
+    private func xAxisLabel(for date: Date) -> some View {
+        switch timeRange {
+        case .week, .month:
+            VStack(spacing: 2) {
+                Text(date, format: .dateTime.day())
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(date, format: .dateTime.month(.defaultDigits).locale(Locale(identifier: "ja_JP")))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        case .threeMonths:
+            Text(date, format: .dateTime.month(.abbreviated).locale(Locale(identifier: "ja_JP")))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("体重推移")
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            // カスタム折れ線グラフ（指定期間の全日付スロットを作り、未入力日は空白）
-            let slots = dateSlots()
-            let byDay = latestEntryByDay()
-            let weights: [Double?] = slots.map { day in
-                byDay[calendar.startOfDay(for: day)]?.weight
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(spacing: 8) {
+                Text("体重")
+                    .font(.system(size: 22, weight: .bold))
+
+                if let latestDisplayedWeight {
+                    Text("最新 \(latestDisplayedWeight, format: .number.precision(.fractionLength(1)))kg")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
-            
-            let availableWeights = weights.compactMap { $0 }
-            let minWeight = availableWeights.min() ?? 0
-            let maxWeight = availableWeights.max() ?? 100
-            let weightRange = maxWeight - minWeight
-            let adjustedRange = weightRange < 2 ? 2 : weightRange
-            let adjustedMin = minWeight - (adjustedRange - weightRange) / 2
-            let adjustedMax = maxWeight + (adjustedRange - weightRange) / 2
-            
-            VStack(spacing: 6) {
-                GeometryReader { geometry in
-                    ZStack {
-                        // グリッドライン
-                        VStack {
-                            ForEach(0..<5) { i in
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(height: 1)
-                                if i < 4 { Spacer() }
+            .frame(maxWidth: .infinity)
+
+            if chartPoints.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.secondary)
+                    Text("体重データがまだありません")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 260)
+            } else {
+                Chart {
+                    RuleMark(y: .value("目標", user.targetWeight))
+                        .foregroundStyle(Color.orange)
+                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [6, 5]))
+                        .annotation(position: .leading, spacing: 6) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("目標")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(Color.orange)
+                                Text(user.targetWeight, format: .number.precision(.fractionLength(1)))
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.orange)
+                                    .clipShape(Capsule())
                             }
                         }
-                        
-                        // 体重数値ラベル
-                        HStack {
-                            VStack {
-                                ForEach(0..<5) { i in
-                                    let weight = adjustedMax - (adjustedMax - adjustedMin) * Double(i) / 4
-                                    Text(String(format: "%.1f", weight))
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                    if i < 4 { Spacer() }
-                                }
-                            }
-                            .frame(width: 30)
-                            
-                            Spacer()
-                        }
-                        
-                        // 折れ線（未入力日は線を切る）
-                        Path { path in
-                            var hasPreviousPoint = false
-                            for index in slots.indices {
-                                guard let weight = weights[index], adjustedMax != adjustedMin else {
-                                    hasPreviousPoint = false
-                                    continue
-                                }
-                                let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(slots.count - 1, 1))
-                                let y = geometry.size.height * (1 - (weight - adjustedMin) / (adjustedMax - adjustedMin))
-                                
-                                if !hasPreviousPoint {
-                                    path.move(to: CGPoint(x: x, y: y))
-                                    hasPreviousPoint = true
-                                } else {
-                                    path.addLine(to: CGPoint(x: x, y: y))
-                                }
-                            }
-                        }
-                        .stroke(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+
+                    ForEach(chartPoints) { point in
+                        AreaMark(
+                            x: .value("日付", point.date),
+                            yStart: .value("下限", yDomain.lowerBound),
+                            yEnd: .value("体重", point.weight)
                         )
-                        
-                        // データポイント（入力日だけ表示）
-                        ForEach(Array(slots.indices), id: \.self) { index in
-                            if let weight = weights[index], adjustedMax != adjustedMin {
-                                let x = 40 + (geometry.size.width - 40) * Double(index) / Double(max(slots.count - 1, 1))
-                                let y = geometry.size.height * (1 - (weight - adjustedMin) / (adjustedMax - adjustedMin))
-                                Circle()
-                                    .fill(Color.blue)
-                                    .frame(width: 8, height: 8)
-                                    .position(x: x, y: y)
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.11, green: 0.84, blue: 0.80).opacity(0.35),
+                                    Color(red: 0.11, green: 0.84, blue: 0.80).opacity(0.05)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
+                        LineMark(
+                            x: .value("日付", point.date),
+                            y: .value("体重", point.weight)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .foregroundStyle(Color(red: 0.11, green: 0.84, blue: 0.80))
+                    }
+
+                    ForEach(recordedPointsInRange) { point in
+                        PointMark(
+                            x: .value("日付", point.date),
+                            y: .value("体重", point.weight)
+                        )
+                        .foregroundStyle(Color(red: 0.11, green: 0.84, blue: 0.80))
+                        .symbolSize(55)
+                    }
+                }
+                .chartXScale(domain: chartDateRange)
+                .chartYScale(domain: yDomain)
+                .chartXAxis {
+                    AxisMarks(values: xAxisDates) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0))
+                        AxisTick(stroke: StrokeStyle(lineWidth: 0))
+                        AxisValueLabel {
+                            if let date = value.as(Date.self) {
+                                xAxisLabel(for: date)
                             }
-                        }
-                        
-                        if availableWeights.isEmpty {
-                            VStack(spacing: 8) {
-                                Image(systemName: "chart.line.uptrend.xyaxis")
-                                    .font(.system(size: 38))
-                                    .foregroundColor(.gray)
-                                Text("データがありません")
-                                    .foregroundColor(.gray)
-                                    .font(.subheadline)
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
                 }
-                .padding(.leading, 10)
-                
-                // X軸（日付）
-                GeometryReader { geo in
-                    let ticks = tickIndices(for: slots)
-                    ZStack(alignment: .topLeading) {
-                        ForEach(ticks, id: \.self) { idx in
-                            let x = 40 + (geo.size.width - 40) * Double(idx) / Double(max(slots.count - 1, 1))
-                            Text(label(for: slots[idx]))
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                                .frame(width: 60, alignment: idx == 0 ? .leading : (idx == slots.count - 1 ? .trailing : .center))
-                                .position(x: x, y: 8)
+                .chartYAxis {
+                    AxisMarks(position: .trailing, values: yAxisValues) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 1))
+                            .foregroundStyle(Color.gray.opacity(0.16))
+                        AxisTick(stroke: StrokeStyle(lineWidth: 0))
+                        AxisValueLabel {
+                            if let number = value.as(Double.self) {
+                                Text(number, format: .number.precision(.fractionLength(1)))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
-                .frame(height: 16)
-                .padding(.leading, 10)
+                .chartLegend(.hidden)
+                .frame(height: 280)
+                .chartPlotStyle { plotArea in
+                    plotArea
+                        .background(Color.clear)
+                }
             }
+
+            Text(timeRange == .week ? "直近7日間の推移" : timeRange == .month ? "直近30日間の推移" : "直近3ヶ月の推移")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 24)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 18, y: 8)
     }
 }
 
