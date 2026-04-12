@@ -21,7 +21,18 @@ struct FoodLogView: View {
     }
 
     private var allHistoryEntries: [FoodEntry] {
-        recordViewModel.foodEntries.sorted { $0.time > $1.time }
+        Array(recordViewModel.foodEntries.sorted { $0.time > $1.time }.prefix(20))
+    }
+
+    private var groupedHistoryEntries: [(date: Date, entries: [FoodEntry])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: allHistoryEntries) {
+            calendar.startOfDay(for: $0.time)
+        }
+
+        return grouped
+            .map { (date: $0.key, entries: $0.value.sorted { $0.time > $1.time }) }
+            .sorted { $0.date > $1.date }
     }
 
     var body: some View {
@@ -69,12 +80,23 @@ struct FoodLogView: View {
                         Text("履歴がありません")
                             .foregroundColor(.secondary)
                     } else {
-                        ForEach(allHistoryEntries) { entry in
-                            FoodHistoryEntryRow(entry: entry)
+                        ForEach(groupedHistoryEntries, id: \.date) { group in
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(historySectionDateFormatter.string(from: group.date))
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.secondary)
+
+                                ForEach(group.entries) { entry in
+                                    FoodHistoryEntryRow(entry: entry)
+                                }
+                            }
+                            .padding(.vertical, 4)
                         }
                     }
                 } header: {
                     Text("食事履歴")
+                } footer: {
+                    Text("最新20件を日付ごとに表示しています")
                 }
             }
             .listStyle(.plain)
@@ -107,6 +129,14 @@ struct FoodLogView: View {
             }
         }
     }
+}
+
+private var historySectionDateFormatter: DateFormatter {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "ja_JP")
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter
 }
 
 struct DayCaloriesSummary: View {
