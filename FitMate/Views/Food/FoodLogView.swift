@@ -100,7 +100,6 @@ struct FoodLogView: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("食事記録")
             .navigationBarItems(trailing:
                 Button(action: { showingFoodAdd = true }) {
                     Image(systemName: "plus")

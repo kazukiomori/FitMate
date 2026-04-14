@@ -72,7 +72,6 @@ struct ProfileView: View {
                     }
                 }
             }
-            .navigationTitle("プロフィール")
         }
     }
 }

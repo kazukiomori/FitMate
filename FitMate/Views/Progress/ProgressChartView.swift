@@ -49,7 +49,6 @@ struct ProgressChartView: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("進捗")
             .navigationBarItems(trailing:
                 Button(action: { showingWeightInput = true }) {
                     Image(systemName: "plus")
