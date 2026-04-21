@@ -12,6 +12,7 @@ struct HomeView: View {
     @StateObject private var healthKitManager = HealthKitManager()
     @State private var isFirstHomeOpenToday = false
     @State private var targetCalories = 1800
+    @State private var userMessage: String = ""
 
     private let today: Date = Calendar.current.startOfDay(for: Date())
 
@@ -49,19 +50,19 @@ struct HomeView: View {
     private var todayDayKey: String {
         dayKeyFormatter.string(from: Date())
     }
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
                     if let trainer = user.personalTrainer {
-                        TrainerSupportBanner(
+                        TrainerConversationSection(
                             trainer: trainer,
-                            isFirstOpenToday: isFirstHomeOpenToday
+                            isFirstOpenToday: isFirstHomeOpenToday,
+                            userMessage: $userMessage
                         )
                     }
 
-                    // 今日の概要カード
                     VStack(spacing: 15) {
                         HStack {
                             Text("今日の進捗")
@@ -72,13 +73,12 @@ struct HomeView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
-                        
-                        // カロリー円グラフ風
+
                         ZStack {
                             Circle()
                                 .stroke(Color.gray.opacity(0.3), lineWidth: 15)
                                 .frame(width: 150, height: 150)
-                            
+
                             Circle()
                                 .trim(from: 0, to: CGFloat(calorieProgress))
                                 .stroke(
@@ -87,7 +87,7 @@ struct HomeView: View {
                                 )
                                 .frame(width: 150, height: 150)
                                 .rotationEffect(.degrees(-90))
-                            
+
                             VStack {
                                 Text("\(consumedCaloriesToday)")
                                     .font(.title)
@@ -97,7 +97,7 @@ struct HomeView: View {
                                     .foregroundColor(.gray)
                             }
                         }
-                        
+
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                             StatCard(
                                 title: "残り",
@@ -115,22 +115,19 @@ struct HomeView: View {
                     .background(Color.white)
                     .cornerRadius(15)
                     .shadow(radius: 5)
-                    
-                    // HealthKit活動データ
+
                     HealthActivityCard(healthKitManager: healthKitManager)
-                    
-                    // 今日のおすすめ
+
                     VStack(alignment: .leading, spacing: 15) {
                         Text("今日のおすすめ")
                             .font(.headline)
-                        
+
                         RecommendationCard(
                             icon: "leaf.fill",
                             title: "野菜を多めに",
                             description: "今日はビタミンが不足気味です"
                         )
-                        
-                        // HealthKitデータに基づく提案
+
                         if healthKitManager.stepCount < 8000 {
                             RecommendationCard(
                                 icon: "figure.walk",
@@ -166,102 +163,117 @@ struct HomeView: View {
     }
 }
 
-private struct TrainerSupportBanner: View {
+private struct TrainerConversationSection: View {
     let trainer: PersonalTrainer
     let isFirstOpenToday: Bool
+    @Binding var userMessage: String
 
-    private var bannerMessage: String {
+    private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
     }
 
-    private var badgeTitle: String {
-        isFirstOpenToday ? "今日のあいさつ" : "今日のひとこと"
-    }
-
     var body: some View {
-        HStack(spacing: 16) {
-            trainerImage
+        VStack(spacing: 18) {
+            trainerHeroImage
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(badgeTitle)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.pink)
+            VStack(spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    trainerAvatar
 
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(trainer.name.isEmpty ? "あなたのトレーナー" : trainer.name)
                             .font(.headline)
                             .foregroundColor(.primary)
+
+                        Text(trainerMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .lineSpacing(5)
                     }
-
-                    Spacer(minLength: 8)
-
-                    Image(systemName: "sun.max.fill")
-                        .font(.title3)
-                        .foregroundColor(.orange)
-                        .padding(8)
-                        .background(Color.orange.opacity(0.12))
-                        .clipShape(Circle())
-                }
-
-                Text("「\(bannerMessage)」")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                     .background(
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color(red: 1.0, green: 0.97, blue: 0.92))
+                            RoundedRectangle(cornerRadius: 22)
+                                .fill(Color.white)
 
                             TrainerSpeechBubbleTail()
-                                .fill(Color(red: 1.0, green: 0.97, blue: 0.92))
+                                .fill(Color.white)
                                 .frame(width: 14, height: 18)
-                                .offset(x: -8, y: 8)
+                                .offset(x: -8, y: 10)
                         }
                     )
 
-                Text("毎日あなたに合わせて応援します")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    Spacer(minLength: 0)
+                }
+
+                HStack(alignment: .bottom, spacing: 12) {
+                    Spacer(minLength: 32)
+
+                    HStack(spacing: 10) {
+                        TextField("今日の相談や気持ちを入力してください", text: $userMessage, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(2...4)
+
+                        Button(action: {}) {
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 38, height: 38)
+                                .background(Color.black)
+                                .clipShape(Circle())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(Color(red: 0.97, green: 0.97, blue: 0.98))
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                }
             }
         }
         .padding(18)
         .background(
             LinearGradient(
                 colors: [
-                    Color.white,
-                    Color(red: 1.0, green: 0.98, blue: 0.95)
+                    Color(red: 0.99, green: 0.97, blue: 0.95),
+                    Color(red: 0.95, green: 0.96, blue: 1.0)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
-        .cornerRadius(20)
+        .cornerRadius(28)
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.orange.opacity(0.12), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 28)
+                .stroke(Color.white.opacity(0.7), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
+        .shadow(color: Color.black.opacity(0.08), radius: 14, x: 0, y: 8)
     }
 
-    private var trainerImage: some View {
+    private var trainerHeroImage: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(red: 0.98, green: 0.94, blue: 0.95))
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.98, green: 0.90, blue: 0.90),
+                            Color(red: 0.96, green: 0.95, blue: 1.0)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
 
             if let image = trainer.image {
                 Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .padding(8)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "person.crop.rectangle")
-                        .font(.system(size: 34))
+                        .font(.system(size: 42))
                         .foregroundColor(.pink.opacity(0.7))
 
                     Text("Trainer")
@@ -270,12 +282,55 @@ private struct TrainerSupportBanner: View {
                 }
             }
         }
-        .frame(width: 112, height: 150)
+        .frame(maxWidth: .infinity)
+        .frame(height: 250)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.9), lineWidth: 1)
+            LinearGradient(
+                colors: [Color.clear, Color.black.opacity(0.2)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 24))
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+        .overlay(alignment: .bottomLeading) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(isFirstOpenToday ? "今日のあいさつ" : "トレーナーチャット")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white.opacity(0.9))
+
+                Text(trainer.name.isEmpty ? "あなたのトレーナー" : trainer.name)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+            .padding(18)
+        }
+    }
+
+    private var trainerAvatar: some View {
+        Group {
+            if let image = trainer.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(8)
+                    .foregroundColor(.pink.opacity(0.8))
+                    .background(Color.white)
+            }
+        }
+        .frame(width: 48, height: 48)
+        .background(Color.white)
+        .clipShape(Circle())
+        .overlay(
+            Circle()
+                .stroke(Color.white, lineWidth: 2)
+        )
     }
 }
 
@@ -298,16 +353,16 @@ private struct TrainerSpeechBubbleTail: Shape {
 
 struct HealthActivityCard: View {
     @ObservedObject var healthKitManager: HealthKitManager
-    
+
     var body: some View {
         VStack(spacing: 15) {
             HStack {
                 Text("今日の活動")
                     .font(.headline)
                     .fontWeight(.bold)
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     healthKitManager.refreshHealthData()
                 }) {
@@ -315,10 +370,9 @@ struct HealthActivityCard: View {
                         .foregroundColor(.blue)
                 }
             }
-            
+
             if healthKitManager.isAuthorized {
                 VStack(spacing: 20) {
-                    // 歩数表示
                     HStack {
                         VStack(alignment: .leading) {
                             HStack {
@@ -328,34 +382,32 @@ struct HealthActivityCard: View {
                                 Text("歩数")
                                     .font(.headline)
                             }
-                            
+
                             Text("\(healthKitManager.stepCount)")
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .foregroundColor(.green)
-                            
-                            // 目標達成率
+
                             let stepGoal = 8000
                             let stepProgress = min(Double(healthKitManager.stepCount) / Double(stepGoal), 1.0)
-                            
+
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("目標: \(stepGoal)歩")
                                     .font(.caption)
                                     .foregroundColor(.gray)
-                                
+
                                 ProgressView(value: stepProgress)
                                     .accentColor(.green)
                                     .frame(height: 6)
-                                
+
                                 Text("\(Int(stepProgress * 100))%達成")
                                     .font(.caption)
                                     .foregroundColor(.green)
                             }
                         }
-                        
+
                         Spacer()
-                        
-                        // 消費カロリー表示
+
                         VStack(alignment: .trailing) {
                             HStack {
                                 Text("消費カロリー")
@@ -364,45 +416,44 @@ struct HealthActivityCard: View {
                                     .foregroundColor(.red)
                                     .font(.title2)
                             }
-                            
+
                             Text("\(Int(healthKitManager.activeEnergyBurned))")
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .foregroundColor(.red)
-                            
+
                             Text("kcal")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
                     }
-                    
-                    // 活動レベル表示
+
                     HStack {
                         VStack(alignment: .leading) {
                             Text("活動レベル")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
-                            
+
                             let activityLevel = getActivityLevel()
                             HStack {
                                 Text(activityLevel.title)
                                     .font(.headline)
                                     .foregroundColor(activityLevel.color)
-                                
+
                                 Circle()
                                     .fill(activityLevel.color)
                                     .frame(width: 8, height: 8)
                             }
                         }
-                        
+
                         Spacer()
-                        
+
                         VStack(alignment: .trailing) {
                             Text("推定距離")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
-                            
-                            let distance = Double(healthKitManager.stepCount) * 0.0008 // 1歩≈0.8m
+
+                            let distance = Double(healthKitManager.stepCount) * 0.0008
                             Text(String(format: "%.1f km", distance))
                                 .font(.headline)
                                 .foregroundColor(.blue)
@@ -414,11 +465,11 @@ struct HealthActivityCard: View {
                     Image(systemName: "heart.text.square")
                         .font(.system(size: 40))
                         .foregroundColor(.red)
-                    
+
                     Text("HealthKitへのアクセス許可が必要です")
                         .font(.headline)
                         .multilineTextAlignment(.center)
-                    
+
                     Text("設定 > プライバシーとセキュリティ > ヘルスケアから許可してください")
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -433,11 +484,11 @@ struct HealthActivityCard: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-    
+
     private func getActivityLevel() -> (title: String, color: Color) {
         let steps = healthKitManager.stepCount
         let calories = healthKitManager.activeEnergyBurned
-        
+
         if steps >= 10000 || calories >= 400 {
             return ("とても活発", .green)
         } else if steps >= 7000 || calories >= 300 {
