@@ -7,6 +7,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var user: User
+    @EnvironmentObject var recordViewModel: RecordViewModel
     @AppStorage("lastHomeOpenedDayKey") private var lastHomeOpenedDayKey: String = ""
     @State private var isFirstHomeOpenToday = false
     @State private var userMessage: String = ""
@@ -33,7 +34,8 @@ struct HomeView: View {
                             trainer: trainer,
                             isFirstOpenToday: isFirstHomeOpenToday,
                             userMessage: $userMessage,
-                            isMessageFieldFocused: $isMessageFieldFocused
+                            isMessageFieldFocused: $isMessageFieldFocused,
+                            recordViewModel: recordViewModel
                         )
                     }
                 }
@@ -65,6 +67,10 @@ private struct TrainerConversationSection: View {
     let isFirstOpenToday: Bool
     @Binding var userMessage: String
     @FocusState.Binding var isMessageFieldFocused: Bool
+    @ObservedObject var recordViewModel: RecordViewModel
+
+    @State private var showingWeightInput = false
+    @State private var showingFoodAdd = false
 
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
@@ -104,6 +110,8 @@ private struct TrainerConversationSection: View {
 
                     Spacer(minLength: 0)
                 }
+
+                quickActionButtons
 
                 HStack(alignment: .bottom, spacing: 12) {
                     Spacer(minLength: 32)
@@ -149,6 +157,53 @@ private struct TrainerConversationSection: View {
                 .stroke(Color.white.opacity(0.7), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.08), radius: 14, x: 0, y: 8)
+        .sheet(isPresented: $showingWeightInput) {
+            WeightInputView(recordViewModel: recordViewModel)
+        }
+        .sheet(isPresented: $showingFoodAdd) {
+            FoodAddView(recordViewModel: recordViewModel, selectedMeal: .breakfast)
+        }
+    }
+
+    private var quickActionButtons: some View {
+        HStack(spacing: 10) {
+            HomeQuickActionButton(
+                title: "体重を報告",
+                icon: "scalemass.fill",
+                foregroundColor: .white,
+                iconForegroundColor: Color(red: 0.31, green: 0.74, blue: 0.47),
+                background: LinearGradient(
+                    colors: [
+                        Color(red: 0.40, green: 0.84, blue: 0.55),
+                        Color(red: 0.30, green: 0.74, blue: 0.46)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            ) {
+                isMessageFieldFocused = false
+                showingWeightInput = true
+            }
+
+            HomeQuickActionButton(
+                title: "食事を報告",
+                icon: "fork.knife",
+                foregroundColor: .black,
+                iconForegroundColor: .black,
+                background: LinearGradient(
+                    colors: [
+                        Color(red: 1.00, green: 0.86, blue: 0.30),
+                        Color(red: 1.00, green: 0.78, blue: 0.14)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            ) {
+                isMessageFieldFocused = false
+                showingFoodAdd = true
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var trainerHeroImage: some View {
@@ -232,6 +287,48 @@ private struct TrainerConversationSection: View {
             Circle()
                 .stroke(Color.white, lineWidth: 2)
         )
+    }
+}
+
+private struct HomeQuickActionButton<Background: ShapeStyle>: View {
+    let title: String
+    let icon: String
+    let foregroundColor: Color
+    let iconForegroundColor: Color
+    let background: Background
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                HStack(spacing: 7) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.22))
+                            .frame(width: 20, height: 20)
+
+                        Image(systemName: icon)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(iconForegroundColor)
+                    }
+
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(foregroundColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 40)
+            .background(background, in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+        }
+        .buttonStyle(.plain)
     }
 }
 
