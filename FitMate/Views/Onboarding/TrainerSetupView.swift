@@ -478,10 +478,14 @@ private struct TrainerCandidate: Identifiable {
         }
 
         let assetTrainers: [AssetTrainer] = [
-            AssetTrainer(name: "", gender: .female, imageNames: ["trainer1_first", "trainer1_second"]),
-            AssetTrainer(name: "", gender: .female, imageNames: ["trainer2_first", "trainer2_second"]),
+            AssetTrainer(name: "", gender: .female, imageNames: ["trainer1/first", "trainer1/second"]),
+            AssetTrainer(name: "", gender: .female, imageNames: ["trainer2/first", "trainer2/second"]),
             AssetTrainer(name: "", gender: .female, imageNames: ["trainer3_first", "trainer3_second"])
         ]
+
+        func loadTrainerImage(named name: String) -> UIImage? {
+            UIImage(named: name) ?? UIImage(named: name.replacingOccurrences(of: "/", with: "_"))
+        }
 
         func randomPreferences(fixedGender: TrainerGender?) -> TrainerPreferences {
             TrainerPreferences(
@@ -516,7 +520,7 @@ private struct TrainerCandidate: Identifiable {
         return (0..<count).map { i in
             let trainer = trainersToUse[i % trainersToUse.count]
 
-            let images = trainer.imageNames.compactMap { UIImage(named: $0) }
+            let images = trainer.imageNames.compactMap(loadTrainerImage(named:))
 
             return TrainerCandidate(
                 id: UUID(),
