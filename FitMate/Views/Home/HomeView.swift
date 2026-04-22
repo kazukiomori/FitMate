@@ -10,6 +10,7 @@ struct HomeView: View {
     @AppStorage("lastHomeOpenedDayKey") private var lastHomeOpenedDayKey: String = ""
     @State private var isFirstHomeOpenToday = false
     @State private var userMessage: String = ""
+    @FocusState private var isMessageFieldFocused: Bool
 
     private var dayKeyFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -31,13 +32,19 @@ struct HomeView: View {
                         TrainerConversationSection(
                             trainer: trainer,
                             isFirstOpenToday: isFirstHomeOpenToday,
-                            userMessage: $userMessage
+                            userMessage: $userMessage,
+                            isMessageFieldFocused: $isMessageFieldFocused
                         )
                     }
                 }
                 .padding()
             }
             .background(Color.gray.opacity(0.1))
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    isMessageFieldFocused = false
+                }
+            )
         }
         .onAppear {
             updateHomeOpenState()
@@ -57,6 +64,7 @@ private struct TrainerConversationSection: View {
     let trainer: PersonalTrainer
     let isFirstOpenToday: Bool
     @Binding var userMessage: String
+    @FocusState.Binding var isMessageFieldFocused: Bool
 
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
@@ -104,8 +112,11 @@ private struct TrainerConversationSection: View {
                         TextField("今日の相談や気持ちを入力してください", text: $userMessage, axis: .vertical)
                             .textFieldStyle(.plain)
                             .lineLimit(2...4)
+                            .focused($isMessageFieldFocused)
 
-                        Button(action: {}) {
+                        Button(action: {
+                            isMessageFieldFocused = false
+                        }) {
                             Image(systemName: "paperplane.fill")
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.white)
