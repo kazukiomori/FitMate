@@ -71,9 +71,14 @@ private struct TrainerConversationSection: View {
 
     @State private var showingWeightInput = false
     @State private var showingFoodAdd = false
+    @State private var trainerAvatarExpression: TrainerAvatarExpression = .smile
 
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
+    }
+
+    private func setTrainerAvatarExpression(_ expression: TrainerAvatarExpression) {
+        trainerAvatarExpression = expression
     }
 
     var body: some View {
@@ -267,7 +272,7 @@ private struct TrainerConversationSection: View {
 
     private var trainerAvatar: some View {
         Group {
-            if let image = trainer.image {
+            if let image = trainer.avatarImage(for: trainerAvatarExpression) {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -287,6 +292,9 @@ private struct TrainerConversationSection: View {
             Circle()
                 .stroke(Color.white, lineWidth: 2)
         )
+        .onAppear {
+            setTrainerAvatarExpression(.smile)
+        }
     }
 }
 

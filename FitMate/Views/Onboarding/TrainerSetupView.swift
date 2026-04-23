@@ -358,7 +358,8 @@ struct TrainerSetupView: View {
             let trainer = PersonalTrainer(
                 name: candidate.name,
                 preferences: candidate.preferences,
-                images: candidate.images
+                images: candidate.images,
+                assetNamespace: candidate.assetNamespace
             )
 
             pendingTrainer = trainer
@@ -465,6 +466,7 @@ private struct TrainerCandidate: Identifiable {
     let id: UUID
     let name: String
     let preferences: TrainerPreferences
+    let assetNamespace: String?
     var images: [UIImage]
     var hasRequestedImages: Bool
 
@@ -474,13 +476,14 @@ private struct TrainerCandidate: Identifiable {
         struct AssetTrainer {
             let name: String
             let gender: TrainerGender
+            let assetNamespace: String?
             let imageNames: [String]
         }
 
         let assetTrainers: [AssetTrainer] = [
-            AssetTrainer(name: "", gender: .female, imageNames: ["trainer1/first", "trainer1/second"]),
-            AssetTrainer(name: "", gender: .female, imageNames: ["trainer2/first", "trainer2/second"]),
-            AssetTrainer(name: "", gender: .female, imageNames: ["trainer3_first", "trainer3_second"])
+            AssetTrainer(name: "", gender: .female, assetNamespace: "trainer1", imageNames: ["trainer1/first", "trainer1/second"]),
+            AssetTrainer(name: "", gender: .female, assetNamespace: "trainer2", imageNames: ["trainer2/first", "trainer2/second"]),
+            AssetTrainer(name: "", gender: .female, assetNamespace: nil, imageNames: ["trainer3_first", "trainer3_second"])
         ]
 
         func loadTrainerImage(named name: String) -> UIImage? {
@@ -504,6 +507,7 @@ private struct TrainerCandidate: Identifiable {
                     id: UUID(),
                     name: "健太コーチ\(i + 1)",
                     preferences: randomPreferences(fixedGender: .male),
+                    assetNamespace: nil,
                     images: [],
                     hasRequestedImages: false
                 )
@@ -526,6 +530,7 @@ private struct TrainerCandidate: Identifiable {
                 id: UUID(),
                 name: trainer.name,
                 preferences: randomPreferences(fixedGender: trainer.gender),
+                assetNamespace: trainer.assetNamespace,
                 images: images,
                 hasRequestedImages: images.count >= targetImageCount
             )

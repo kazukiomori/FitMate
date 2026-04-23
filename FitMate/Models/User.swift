@@ -15,6 +15,7 @@ class User: ObservableObject {
         let name: String
         let preferences: PersistedTrainerPreferences
         let imagesData: [Data]
+        let assetNamespace: String?
         let createdAt: Date
     }
 
@@ -141,6 +142,7 @@ class User: ObservableObject {
             imagesData: trainer.images.compactMap { image in
                 image.jpegData(compressionQuality: 0.92) ?? image.pngData()
             },
+            assetNamespace: trainer.assetNamespace,
             createdAt: trainer.createdAt
         )
 
@@ -161,6 +163,7 @@ class User: ObservableObject {
             name: persistedTrainer.name,
             preferences: preferences,
             images: restoredImages,
+            assetNamespace: persistedTrainer.assetNamespace,
             createdAt: persistedTrainer.createdAt
         )
         hasCompletedTrainerSetup = true

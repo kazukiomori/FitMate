@@ -6,27 +6,43 @@
 
 import UIKit
 
+enum TrainerAvatarExpression: String, Codable, CaseIterable {
+    case smile
+    case sad
+    case angry
+}
+
 struct PersonalTrainer {
     let id = UUID()
     var name: String
     var preferences: TrainerPreferences
     let images: [UIImage]
+    let assetNamespace: String?
     var image: UIImage? { images.first }
     let createdAt: Date
     
-    init(name: String, preferences: TrainerPreferences, images: [UIImage] = []) {
-        self.init(name: name, preferences: preferences, images: images, createdAt: Date())
+    init(name: String, preferences: TrainerPreferences, images: [UIImage] = [], assetNamespace: String? = nil) {
+        self.init(name: name, preferences: preferences, images: images, assetNamespace: assetNamespace, createdAt: Date())
     }
 
-    init(name: String, preferences: TrainerPreferences, images: [UIImage] = [], createdAt: Date) {
+    init(name: String, preferences: TrainerPreferences, images: [UIImage] = [], assetNamespace: String? = nil, createdAt: Date) {
         self.name = name
         self.preferences = preferences
         self.images = images
+        self.assetNamespace = assetNamespace
         self.createdAt = createdAt
     }
 
-    init(name: String, preferences: TrainerPreferences, image: UIImage? = nil) {
-        self.init(name: name, preferences: preferences, images: image.map { [$0] } ?? [])
+    init(name: String, preferences: TrainerPreferences, image: UIImage? = nil, assetNamespace: String? = nil) {
+        self.init(name: name, preferences: preferences, images: image.map { [$0] } ?? [], assetNamespace: assetNamespace)
+    }
+
+    func avatarImage(for expression: TrainerAvatarExpression = .smile) -> UIImage? {
+        guard let assetNamespace else { return image }
+
+        return UIImage(named: "\(assetNamespace)/\(expression.rawValue)")
+            ?? UIImage(named: "\(assetNamespace)_\(expression.rawValue)")
+            ?? image
     }
     
     static func generateMessages(for preferences: TrainerPreferences) -> [String] {
