@@ -72,13 +72,42 @@ private struct TrainerConversationSection: View {
     @State private var showingWeightInput = false
     @State private var showingFoodAdd = false
     @State private var trainerAvatarExpression: TrainerAvatarExpression = .smile
+    @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
 
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
     }
 
+    private var displayedTrainerMessage: String {
+        trainerMessageAnimator.displayedText.isEmpty ? trainerMessage : trainerMessageAnimator.displayedText
+    }
+
     private func setTrainerAvatarExpression(_ expression: TrainerAvatarExpression) {
         trainerAvatarExpression = expression
+    }
+
+    private func playTrainerMessage(
+        _ message: String,
+        expression: TrainerAvatarExpression = .smile,
+        characterInterval: UInt64 = 45_000_000,
+        completion: (() -> Void)? = nil
+    ) {
+        setTrainerAvatarExpression(expression)
+        trainerMessageAnimator.play(message, characterInterval: characterInterval, completion: completion)
+    }
+
+    private func handleFoodReportTap() {
+        isMessageFieldFocused = false
+        playTrainerMessage("何を食べたか教えてね！") {
+            showingFoodAdd = true
+        }
+    }
+
+    private func handleWeightReportTap() {
+        isMessageFieldFocused = false
+        playTrainerMessage("今日の体重を教えてね！") {
+            showingWeightInput = true
+        }
     }
 
     var body: some View {
@@ -94,7 +123,7 @@ private struct TrainerConversationSection: View {
                             .font(.headline)
                             .foregroundColor(.primary)
 
-                        Text(trainerMessage)
+                        Text(displayedTrainerMessage)
                             .font(.subheadline)
                             .foregroundColor(.primary)
                             .lineSpacing(5)
@@ -168,6 +197,12 @@ private struct TrainerConversationSection: View {
         .sheet(isPresented: $showingFoodAdd) {
             FoodAddView(recordViewModel: recordViewModel, selectedMeal: .breakfast)
         }
+        .onAppear {
+            trainerMessageAnimator.setImmediately(trainerMessage)
+        }
+        .onChange(of: isFirstOpenToday) { _ in
+            trainerMessageAnimator.setImmediately(trainerMessage)
+        }
     }
 
     private var quickActionButtons: some View {
@@ -186,8 +221,7 @@ private struct TrainerConversationSection: View {
                     endPoint: .bottomTrailing
                 )
             ) {
-                isMessageFieldFocused = false
-                showingWeightInput = true
+                handleWeightReportTap()
             }
 
             HomeQuickActionButton(
@@ -204,8 +238,7 @@ private struct TrainerConversationSection: View {
                     endPoint: .bottomTrailing
                 )
             ) {
-                isMessageFieldFocused = false
-                showingFoodAdd = true
+                handleFoodReportTap()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
