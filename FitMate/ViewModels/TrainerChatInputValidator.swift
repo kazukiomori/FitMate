@@ -44,6 +44,13 @@ enum TrainerChatInputValidator {
             )
         }
 
+        guard !containsOnlyEmoji(in: sanitized) else {
+            return TrainerChatInputValidationResult(
+                sanitizedMessage: sanitized,
+                errorMessage: "絵文字だけでは送信できません"
+            )
+        }
+
         guard containsMeaningfulCharacters(in: sanitized) else {
             return TrainerChatInputValidationResult(
                 sanitizedMessage: sanitized,
@@ -55,6 +62,20 @@ enum TrainerChatInputValidator {
             return TrainerChatInputValidationResult(
                 sanitizedMessage: sanitized,
                 errorMessage: "メッセージは\(maximumLength)文字以内で入力してください"
+            )
+        }
+
+        guard !containsURL(in: sanitized) else {
+            return TrainerChatInputValidationResult(
+                sanitizedMessage: sanitized,
+                errorMessage: "URLを含むメッセージは送信できません"
+            )
+        }
+
+        guard !containsPhoneNumber(in: sanitized) else {
+            return TrainerChatInputValidationResult(
+                sanitizedMessage: sanitized,
+                errorMessage: "電話番号を含むメッセージは送信できません"
             )
         }
 
@@ -81,6 +102,36 @@ enum TrainerChatInputValidator {
         text.unicodeScalars.contains { scalar in
             CharacterSet.letters.contains(scalar) || CharacterSet.decimalDigits.contains(scalar)
         }
+    }
+
+    private static func containsOnlyEmoji(in text: String) -> Bool {
+        let nonWhitespaceCharacters = text.filter { !$0.isWhitespace }
+
+        guard !nonWhitespaceCharacters.isEmpty else { return false }
+
+        return nonWhitespaceCharacters.allSatisfy { character in
+            character.unicodeScalars.allSatisfy { scalar in
+                scalar.properties.isEmoji || scalar.properties.isEmojiPresentation || scalar.value == 0xFE0F || scalar.value == 0x200D
+            }
+        }
+    }
+
+    private static func containsURL(in text: String) -> Bool {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return false
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return detector.firstMatch(in: text, options: [], range: range) != nil
+    }
+
+    private static func containsPhoneNumber(in text: String) -> Bool {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.phoneNumber.rawValue) else {
+            return false
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return detector.firstMatch(in: text, options: [], range: range) != nil
     }
 
     private static func containsProhibitedTerm(in normalizedText: String) -> Bool {
