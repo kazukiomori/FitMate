@@ -72,6 +72,7 @@ private struct TrainerConversationSection: View {
     @State private var showingWeightInput = false
     @State private var showingFoodAdd = false
     @State private var trainerAvatarExpression: TrainerAvatarExpression = .smile
+    @State private var chatValidationMessage: String?
     @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
 
     private var trainerMessage: String {
@@ -108,6 +109,32 @@ private struct TrainerConversationSection: View {
         playTrainerMessage("今日の体重を教えてね！") {
             showingWeightInput = true
         }
+    }
+
+    private var sanitizedUserMessage: String {
+        userMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var currentMessageCount: Int {
+        sanitizedUserMessage.count
+    }
+
+    private func handleValidatedChatSend(_ message: String) {
+        // 将来的にここでAPIへ送信する
+        isMessageFieldFocused = false
+        chatValidationMessage = nil
+        userMessage = message
+    }
+
+    private func handleChatSendTap() {
+        let validationResult = TrainerChatInputValidator.validate(userMessage)
+
+        guard validationResult.isValid else {
+            chatValidationMessage = validationResult.errorMessage
+            return
+        }
+
+        handleValidatedChatSend(validationResult.sanitizedMessage)
     }
 
     var body: some View {
@@ -150,21 +177,41 @@ private struct TrainerConversationSection: View {
                 HStack(alignment: .bottom, spacing: 12) {
                     Spacer(minLength: 32)
 
-                    HStack(spacing: 10) {
-                        TextField("今日の相談や気持ちを入力してください", text: $userMessage, axis: .vertical)
-                            .textFieldStyle(.plain)
-                            .lineLimit(2...4)
-                            .focused($isMessageFieldFocused)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 10) {
+                            TextField("今日の相談や気持ちを入力してください", text: $userMessage, axis: .vertical)
+                                .textFieldStyle(.plain)
+                                .lineLimit(2...4)
+                                .focused($isMessageFieldFocused)
 
-                        Button(action: {
-                            isMessageFieldFocused = false
-                        }) {
-                            Image(systemName: "paperplane.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(width: 38, height: 38)
-                                .background(Color.black)
-                                .clipShape(Circle())
+                            Button(action: {
+                                handleChatSendTap()
+                            }) {
+                                Image(systemName: "paperplane.fill")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 38, height: 38)
+                                    .background(Color.black)
+                                    .clipShape(Circle())
+                            }
+                        }
+
+                        HStack(spacing: 8) {
+                            if let chatValidationMessage {
+                                Text(chatValidationMessage)
+                                    .font(.caption2)
+                                    .foregroundColor(.red)
+                            } else {
+                                Text("\(TrainerChatInputValidator.minimumLength)〜\(TrainerChatInputValidator.maximumLength)文字で入力")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Text("\(currentMessageCount)/\(TrainerChatInputValidator.maximumLength)")
+                                .font(.caption2)
+                                .foregroundColor(currentMessageCount > TrainerChatInputValidator.maximumLength ? .red : .secondary)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -202,6 +249,11 @@ private struct TrainerConversationSection: View {
         }
         .onChange(of: isFirstOpenToday) { _ in
             trainerMessageAnimator.setImmediately(trainerMessage)
+        }
+        .onChange(of: userMessage) { _ in
+            if chatValidationMessage != nil {
+                chatValidationMessage = TrainerChatInputValidator.validate(userMessage).errorMessage
+            }
         }
     }
 
