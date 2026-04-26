@@ -74,6 +74,7 @@ private struct TrainerConversationSection: View {
     @State private var trainerAvatarExpression: TrainerAvatarExpression = .smile
     @State private var chatValidationMessage: String?
     @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
+    @StateObject private var coachMessageViewModel = CoachMessageViewModel()
 
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
@@ -120,10 +121,31 @@ private struct TrainerConversationSection: View {
     }
 
     private func handleValidatedChatSend(_ message: String) {
-        // 将来的にここでAPIへ送信する
         isMessageFieldFocused = false
         chatValidationMessage = nil
         userMessage = message
+
+        Task {
+            await coachMessageViewModel.send(
+                inputText: message,
+                trainerGender: trainer.preferences.gender,
+                trainerPersonality: trainer.preferences.personality,
+                intimacyLevel: 8
+            )
+
+            if let response = coachMessageViewModel.response {
+                switch response.type {
+                case .nutrition:
+                    playTrainerMessage(response.comment, expression: .smile)
+
+                case .chat:
+                    playTrainerMessage(response.comment, expression: .smile)
+                }
+            } else if let errorMessage = coachMessageViewModel.errorMessage {
+                chatValidationMessage = errorMessage
+                setTrainerAvatarExpression(.sad)
+            }
+        }
     }
 
     private func handleChatSendTap() {
@@ -187,13 +209,23 @@ private struct TrainerConversationSection: View {
                             Button(action: {
                                 handleChatSendTap()
                             }) {
-                                Image(systemName: "paperplane.fill")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 38, height: 38)
-                                    .background(Color.black)
-                                    .clipShape(Circle())
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.black)
+                                        .frame(width: 38, height: 38)
+
+                                    if coachMessageViewModel.isLoading {
+                                        ProgressView()
+                                            .tint(.white)
+                                            .scaleEffect(0.7)
+                                    } else {
+                                        Image(systemName: "paperplane.fill")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
                             }
+                            .disabled(coachMessageViewModel.isLoading)
                         }
 
                         HStack(spacing: 8) {
