@@ -95,7 +95,7 @@ enum TrainerChatInputValidator {
     private static func normalizedText(for text: String) -> String {
         text
             .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "ja_JP"))
-            .replacingOccurrences(of: "\s+", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: "", options: .regularExpression)
     }
 
     private static func containsMeaningfulCharacters(in text: String) -> Bool {
@@ -134,10 +134,10 @@ enum TrainerChatInputValidator {
         return detector.firstMatch(in: text, options: [], range: range) != nil
     }
 
-    private static func containsProhibitedTerm(in normalizedText: String) -> Bool {
+    private static func containsProhibitedTerm(in normalizedTextValue: String) -> Bool {
         prohibitedTerms.contains { term in
             let normalizedTerm = normalizedText(for: term)
-            return !normalizedTerm.isEmpty && normalizedText.contains(normalizedTerm)
+            return !normalizedTerm.isEmpty && normalizedTextValue.contains(normalizedTerm)
         }
     }
 }
