@@ -27,7 +27,7 @@ struct FoodAddView: View {
     @Environment(\.presentationMode) var presentationMode
 
     // 栄養素自動取得用
-    @StateObject private var nutritionVM = NutritionViewModel()
+    @StateObject private var coachMessageVM = CoachMessageViewModel()
     @State private var fetchedNutrition: NutritionResponse?
     
     @StateObject private var visionMenuVM = VisionMenuViewModel()
@@ -99,7 +99,7 @@ struct FoodAddView: View {
                 Button(action: {
                     Task { await autoFillNutrition() }
                 }) {
-                    if nutritionVM.isLoading {
+                    if coachMessageVM.isLoading {
                         ProgressView()
                             .scaleEffect(0.8)
                     } else {
@@ -111,9 +111,9 @@ struct FoodAddView: View {
                             .cornerRadius(6)
                     }
                 }
-                .disabled(foodName.trimmingCharacters(in: .whitespaces).isEmpty || nutritionVM.isLoading)
+                .disabled(foodName.trimmingCharacters(in: .whitespaces).isEmpty || coachMessageVM.isLoading)
             }
-            if let error = nutritionVM.errorMessage {
+            if let error = coachMessageVM.errorMessage {
                 Text(error)
                     .foregroundColor(.red)
                     .font(.caption)
@@ -305,10 +305,24 @@ struct FoodAddView: View {
     private func autoFillNutrition() async {
         let query = foodName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return }
-        await nutritionVM.search(query: query)
-        if let response = nutritionVM.result {
-            calories = String(Int(response.calories_kcal.rounded()))
-            fetchedNutrition = response
+        await coachMessageVM.send(
+            inputText: query,
+            trainerGender: .female,
+            trainerPersonality: .supportive,
+            intimacyLevel: 0
+        )
+
+        if let response = coachMessageVM.response {
+            switch response.type {
+            case .nutrition:
+                if let nutrition = response.nutrition {
+                    calories = String(Int(nutrition.calories_kcal.rounded()))
+                    fetchedNutrition = nutrition
+                }
+
+            case .chat:
+                break
+            }
         }
     }
     
@@ -349,12 +363,27 @@ struct FoodAddView: View {
             if hasBarcodeNutrition {
                 barcodeStatusMessage = "バーコードから商品情報を取得しました"
             } else {
-                await nutritionVM.search(query: name)
+                await coachMessageVM.send(
+                    inputText: name,
+                    trainerGender: .female,
+                    trainerPersonality: .supportive,
+                    intimacyLevel: 0
+                )
 
-                if let response = nutritionVM.result {
-                    calories = String(Int(response.calories_kcal.rounded()))
-                    fetchedNutrition = response
-                    barcodeStatusMessage = "商品名から栄養情報を補完しました"
+                if let response = coachMessageVM.response {
+                    switch response.type {
+                    case .nutrition:
+                        if let nutrition = response.nutrition {
+                            calories = String(Int(nutrition.calories_kcal.rounded()))
+                            fetchedNutrition = nutrition
+                            barcodeStatusMessage = "商品名から栄養情報を補完しました"
+                        } else {
+                            barcodeStatusMessage = "商品名は取得できましたが、栄養情報は取得できませんでした"
+                        }
+
+                    case .chat:
+                        barcodeStatusMessage = "商品名は取得できましたが、栄養情報は取得できませんでした"
+                    }
                 } else {
                     barcodeStatusMessage = "商品名は取得できましたが、栄養情報は取得できませんでした"
                 }
