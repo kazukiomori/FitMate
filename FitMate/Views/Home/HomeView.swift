@@ -76,6 +76,8 @@ private struct TrainerConversationSection: View {
     @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
     @StateObject private var coachMessageViewModel = CoachMessageViewModel()
 
+    private let currentIntimacyScore = 8
+
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
     }
@@ -120,6 +122,25 @@ private struct TrainerConversationSection: View {
         sanitizedUserMessage.count
     }
 
+    private var intimacyLevel: Int {
+        max(1, min(5, (currentIntimacyScore + 1) / 3))
+    }
+
+    private var intimacyTitle: String {
+        switch intimacyLevel {
+        case 1: return "知り合い"
+        case 2: return "仲良し"
+        case 3: return "親友"
+        case 4: return "相棒"
+        case 5: return "特別"
+        default: return "親友"
+        }
+    }
+
+    private var intimacyProgress: Double {
+        min(max(Double(currentIntimacyScore) / 15.0, 0), 1)
+    }
+
     private func handleValidatedChatSend(_ message: String) {
         isMessageFieldFocused = false
         chatValidationMessage = nil
@@ -130,7 +151,7 @@ private struct TrainerConversationSection: View {
                 inputText: message,
                 trainerGender: trainer.preferences.gender,
                 trainerPersonality: trainer.preferences.personality,
-                intimacyLevel: 8
+                intimacyLevel: currentIntimacyScore
             )
 
             if let response = coachMessageViewModel.response {
@@ -385,6 +406,15 @@ private struct TrainerConversationSection: View {
             }
             .padding(18)
         }
+        .overlay(alignment: .topLeading) {
+            TrainerIntimacyMeter(
+                level: intimacyLevel,
+                title: intimacyTitle,
+                progress: intimacyProgress
+            )
+            .padding(.top, 18)
+            .padding(.leading, 18)
+        }
     }
 
     private var trainerAvatar: some View {
@@ -412,6 +442,113 @@ private struct TrainerConversationSection: View {
         .onAppear {
             setTrainerAvatarExpression(.smile)
         }
+    }
+}
+
+private struct TrainerIntimacyMeter: View {
+    let level: Int
+    let title: String
+    let progress: Double
+    @State private var isPulsing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Heart()
+                        .fill(Color.pink.opacity(0.3))
+                        .frame(width: 74, height: 74)
+                        .blur(radius: isPulsing ? 15 : 6)
+
+                    Heart()
+                        .stroke(Color.pink, lineWidth: 2)
+                        .frame(width: 66, height: 66)
+                        .scaleEffect(isPulsing ? 1.08 : 1.0)
+                        .opacity(isPulsing ? 0.25 : 0.85)
+
+                    Heart()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.pink, .red]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("親密度 Lv.\(level)")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    Text("\"\(title)\"")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white.opacity(0.95))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.black.opacity(0.45))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+                )
+
+                Spacer(minLength: 0)
+            }
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(width: 170, height: 10)
+
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [.pink, .red]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: 170 * progress, height: 10)
+            }
+            .padding(.leading, 6)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                isPulsing = true
+            }
+        }
+    }
+}
+
+struct Heart: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        // ハートの描画開始点（下の尖った部分）
+        let bottom = CGPoint(x: rect.width / 2, y: rect.height * 0.95)
+        path.move(to: bottom)
+        // 左側のカーブ
+        // addCurve(to: 終点, control1: 制御点1, control2: 制御点2)
+        path.addCurve(to: CGPoint(x: 0, y: rect.height * 0.3),
+                      control1: CGPoint(x: rect.width * 0.35, y: rect.height * 0.8),
+                      control2: CGPoint(x: 0, y: rect.height * 0.55))
+        // 左上の山から中央のくぼみへ
+        path.addCurve(to: CGPoint(x: rect.width / 2, y: rect.height * 0.2),
+                      control1: CGPoint(x: 0, y: 0),
+                      control2: CGPoint(x: rect.width * 0.45, y: 0))
+        // 右上の山
+        path.addCurve(to: CGPoint(x: rect.width, y: rect.height * 0.3),
+                      control1: CGPoint(x: rect.width * 0.55, y: 0),
+                      control2: CGPoint(x: rect.width, y: 0))
+        // 右側から下の尖った部分へ
+        path.addCurve(to: bottom,
+                      control1: CGPoint(x: rect.width, y: rect.height * 0.55),
+                      control2: CGPoint(x: rect.width * 0.65, y: rect.height * 0.8))
+        path.closeSubpath()
+        return path
     }
 }
 
