@@ -452,17 +452,17 @@ private struct TrainerIntimacyMeter: View {
     @State private var isPulsing = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
                 ZStack {
                     Heart()
                         .fill(Color.pink.opacity(0.3))
-                        .frame(width: 74, height: 74)
-                        .blur(radius: isPulsing ? 15 : 6)
+                        .frame(width: 50, height: 50)
+                        .blur(radius: isPulsing ? 9 : 3)
 
                     Heart()
                         .stroke(Color.pink, lineWidth: 2)
-                        .frame(width: 66, height: 66)
+                        .frame(width: 43, height: 43)
                         .scaleEffect(isPulsing ? 1.08 : 1.0)
                         .opacity(isPulsing ? 0.25 : 0.85)
 
@@ -474,26 +474,26 @@ private struct TrainerIntimacyMeter: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 48, height: 48)
+                        .frame(width: 28, height: 28)
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("親密度 Lv.\(level)")
-                        .font(.headline)
+                        .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
 
                     Text("\"\(title)\"")
-                        .font(.subheadline)
+                        .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundColor(.white.opacity(0.95))
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
                 .background(
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 14)
                         .fill(Color.black.opacity(0.45))
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                 )
 
                 Spacer(minLength: 0)
@@ -502,7 +502,7 @@ private struct TrainerIntimacyMeter: View {
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Color.white.opacity(0.3))
-                    .frame(width: 170, height: 10)
+                    .frame(width: 122, height: 7)
 
                 Capsule()
                     .fill(
@@ -512,9 +512,9 @@ private struct TrainerIntimacyMeter: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: 170 * progress, height: 10)
+                    .frame(width: 122 * progress, height: 7)
             }
-            .padding(.leading, 6)
+            .padding(.leading, 2)
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
