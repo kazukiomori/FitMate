@@ -174,6 +174,13 @@ private struct TrainerConversationSection: View {
         }
     }
 
+    private func handleDailyChatTap() {
+        premiumChatEntryMode = .none
+        playTrainerMessage("今日はどんなことを話そうか？気軽に送ってね！") {
+            isMessageFieldFocused = true
+        }
+    }
+
     private var sanitizedUserMessage: String {
         userMessage.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -433,6 +440,23 @@ private struct TrainerConversationSection: View {
                 )
             ) {
                 handleFoodReportTap()
+            }
+
+            HomeQuickActionButton(
+                title: "日常会話",
+                icon: "ellipsis.message.fill",
+                foregroundColor: .white,
+                iconForegroundColor: Color(red: 0.36, green: 0.58, blue: 0.93),
+                background: LinearGradient(
+                    colors: [
+                        Color(red: 0.63, green: 0.81, blue: 1.00),
+                        Color(red: 0.46, green: 0.68, blue: 0.95)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            ) {
+                handleDailyChatTap()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
