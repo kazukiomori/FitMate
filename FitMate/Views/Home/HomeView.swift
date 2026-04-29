@@ -64,10 +64,11 @@ struct HomeView: View {
 }
 
 private struct TrainerConversationSection: View {
-    private enum PremiumChatEntryMode {
+    private enum ChatInputMode {
         case none
         case weight
         case food
+        case dailyChat
 
         var promptMessage: String {
             switch self {
@@ -77,6 +78,8 @@ private struct TrainerConversationSection: View {
                 return "体重をこのままチャットで送ってね！ 例: 52.4kg"
             case .food:
                 return "食べたものをこのままチャットで送ってね！ 例: 朝ごはんにおにぎりと味噌汁"
+            case .dailyChat:
+                return "今日はどんなことを話そうか？気軽に送ってね！"
             }
         }
 
@@ -88,6 +91,8 @@ private struct TrainerConversationSection: View {
                 return "体重を入力してください"
             case .food:
                 return "食事内容を入力してください"
+            case .dailyChat:
+                return "日常会話を入力してください"
             }
         }
 
@@ -99,6 +104,8 @@ private struct TrainerConversationSection: View {
                 return "体重報告: "
             case .food:
                 return "食事報告: "
+            case .dailyChat:
+                return "日常会話: "
             }
         }
     }
@@ -114,7 +121,7 @@ private struct TrainerConversationSection: View {
     @State private var showingFoodAdd = false
     @State private var trainerAvatarExpression: TrainerAvatarExpression = .smile
     @State private var chatValidationMessage: String?
-    @State private var premiumChatEntryMode: PremiumChatEntryMode = .none
+    @State private var selectedChatInputMode: ChatInputMode = .none
     @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
     @StateObject private var coachMessageViewModel = CoachMessageViewModel()
 
@@ -141,11 +148,16 @@ private struct TrainerConversationSection: View {
     }
 
     private func handleFoodReportTap() {
+        if selectedChatInputMode == .food, user.isPremiumUser {
+            isMessageFieldFocused = true
+            return
+        }
+
         isMessageFieldFocused = false
+        selectedChatInputMode = .food
 
         if user.isPremiumUser {
-            premiumChatEntryMode = .food
-            playTrainerMessage(PremiumChatEntryMode.food.promptMessage) {
+            playTrainerMessage(ChatInputMode.food.promptMessage) {
                 userMessage = ""
                 isMessageFieldFocused = true
             }
@@ -158,11 +170,16 @@ private struct TrainerConversationSection: View {
     }
 
     private func handleWeightReportTap() {
+        if selectedChatInputMode == .weight, user.isPremiumUser {
+            isMessageFieldFocused = true
+            return
+        }
+
         isMessageFieldFocused = false
+        selectedChatInputMode = .weight
 
         if user.isPremiumUser {
-            premiumChatEntryMode = .weight
-            playTrainerMessage(PremiumChatEntryMode.weight.promptMessage) {
+            playTrainerMessage(ChatInputMode.weight.promptMessage) {
                 userMessage = ""
                 isMessageFieldFocused = true
             }
@@ -175,8 +192,13 @@ private struct TrainerConversationSection: View {
     }
 
     private func handleDailyChatTap() {
-        premiumChatEntryMode = .none
-        playTrainerMessage("今日はどんなことを話そうか？気軽に送ってね！") {
+        if selectedChatInputMode == .dailyChat {
+            isMessageFieldFocused = true
+            return
+        }
+
+        selectedChatInputMode = .dailyChat
+        playTrainerMessage(ChatInputMode.dailyChat.promptMessage) {
             isMessageFieldFocused = true
         }
     }
@@ -210,17 +232,19 @@ private struct TrainerConversationSection: View {
     }
 
     private var inputPlaceholder: String {
-        premiumChatEntryMode.inputPlaceholder
+        selectedChatInputMode.inputPlaceholder
     }
 
     private var helperText: String {
-        switch premiumChatEntryMode {
+        switch selectedChatInputMode {
         case .none:
             return "\(TrainerChatInputValidator.minimumLength)〜\(TrainerChatInputValidator.maximumLength)文字で入力"
         case .weight:
             return "プレミアム: チャットで体重報告できます"
         case .food:
             return "プレミアム: チャットで食事報告できます"
+        case .dailyChat:
+            return "プレミアム/通常どちらでも日常会話できます"
         }
     }
 
@@ -228,8 +252,9 @@ private struct TrainerConversationSection: View {
         isMessageFieldFocused = false
         chatValidationMessage = nil
         userMessage = message
-        let entryMode = premiumChatEntryMode
+        let entryMode = selectedChatInputMode
         let apiMessage = entryMode.apiPrefix + message
+        selectedChatInputMode = .none
 
         Task {
             await coachMessageViewModel.send(
@@ -243,10 +268,10 @@ private struct TrainerConversationSection: View {
                 switch entryMode {
                 case .weight:
                     user.registerWeightRecord()
-                    premiumChatEntryMode = .none
                 case .food:
                     user.registerFoodRecord()
-                    premiumChatEntryMode = .none
+                case .dailyChat:
+                    break
                 case .none:
                     break
                 }
@@ -411,6 +436,7 @@ private struct TrainerConversationSection: View {
             HomeQuickActionButton(
                 title: "体重を報告",
                 icon: "scalemass.fill",
+                isSelected: selectedChatInputMode == .weight,
                 foregroundColor: .white,
                 iconForegroundColor: Color(red: 0.31, green: 0.74, blue: 0.47),
                 background: LinearGradient(
@@ -428,6 +454,7 @@ private struct TrainerConversationSection: View {
             HomeQuickActionButton(
                 title: "食事を報告",
                 icon: "fork.knife",
+                isSelected: selectedChatInputMode == .food,
                 foregroundColor: .black,
                 iconForegroundColor: .black,
                 background: LinearGradient(
@@ -445,6 +472,7 @@ private struct TrainerConversationSection: View {
             HomeQuickActionButton(
                 title: "日常会話",
                 icon: "ellipsis.message.fill",
+                isSelected: selectedChatInputMode == .dailyChat,
                 foregroundColor: .white,
                 iconForegroundColor: Color(red: 0.36, green: 0.58, blue: 0.93),
                 background: LinearGradient(
@@ -763,6 +791,7 @@ struct Heart: Shape {
 private struct HomeQuickActionButton<Background: ShapeStyle>: View {
     let title: String
     let icon: String
+    let isSelected: Bool
     let foregroundColor: Color
     let iconForegroundColor: Color
     let background: Background
@@ -792,12 +821,16 @@ private struct HomeQuickActionButton<Background: ShapeStyle>: View {
             .padding(.horizontal, 12)
             .frame(height: 40)
             .background(background, in: Capsule())
+            .saturation(isSelected ? 1.15 : 0.88)
+            .brightness(isSelected ? -0.03 : 0)
+            .scaleEffect(isSelected ? 1.02 : 1.0)
             .overlay(
                 Capsule()
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    .stroke(Color.white.opacity(isSelected ? 0.34 : 0.18), lineWidth: isSelected ? 1.5 : 1)
             )
-            .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.black.opacity(isSelected ? 0.18 : 0.12), radius: isSelected ? 14 : 10, x: 0, y: isSelected ? 7 : 5)
         }
+        .animation(.easeInOut(duration: 0.18), value: isSelected)
         .buttonStyle(.plain)
     }
 }
