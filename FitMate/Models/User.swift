@@ -75,7 +75,7 @@ class User: ObservableObject {
         let lastWeightRewardDate: Date?
     }
 
-    private static let intimacyLevelThresholds: [Int] = [0, 30, 80, 150, 240, 350, 480, 630, 800, 1000]
+    private static let intimacyLevelThresholds: [Int] = [0, 50, 120, 220, 400, 700, 1000, 1400, 1900, 2500]
 
     @Published var name: String = ""
     @Published var age: Int = 25
