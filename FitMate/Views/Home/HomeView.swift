@@ -62,35 +62,8 @@ struct HomeView: View {
     }
 }
 
-private enum IntimacyStatus: Int {
-    case firstMeeting = 1
-    case acquaintance
-    case personalTrainer
-    case trustedPartner
-    case closeFriend
-    case specialBuddy
-    case specialSupporter
-    case happyToSeeYou
-    case almostLover
-    case closestPartner
-
-    var title: String {
-        switch self {
-        case .firstMeeting: return "はじめまして"
-        case .acquaintance: return "顔なじみ"
-        case .personalTrainer: return "専属トレーナー"
-        case .trustedPartner: return "信頼できる相手"
-        case .closeFriend: return "気軽に話せる仲"
-        case .specialBuddy: return "大切な相棒"
-        case .specialSupporter: return "特別に応援したい人"
-        case .happyToSeeYou: return "会えると嬉しい人"
-        case .almostLover: return "ほっとけない存在"
-        case .closestPartner: return "いちばん近い存在"
-        }
-    }
-}
-
 private struct TrainerConversationSection: View {
+    @EnvironmentObject var user: User
     let trainer: PersonalTrainer
     let isFirstOpenToday: Bool
     @Binding var userMessage: String
@@ -103,8 +76,6 @@ private struct TrainerConversationSection: View {
     @State private var chatValidationMessage: String?
     @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
     @StateObject private var coachMessageViewModel = CoachMessageViewModel()
-
-    private let currentIntimacyScore = 8
 
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
@@ -150,20 +121,20 @@ private struct TrainerConversationSection: View {
         sanitizedUserMessage.count
     }
 
-    private var intimacyStatus: IntimacyStatus {
-        IntimacyStatus(rawValue: max(1, min(10, currentIntimacyScore))) ?? .firstMeeting
-    }
-
     private var intimacyLevel: Int {
-        intimacyStatus.rawValue
+        user.intimacyLevel
     }
 
     private var intimacyTitle: String {
-        intimacyStatus.title
+        user.intimacyTitle
+    }
+
+    private var intimacyExp: Int {
+        user.intimacyExp
     }
 
     private var intimacyProgress: Double {
-        min(max(Double(currentIntimacyScore) / 10.0, 0), 1)
+        user.intimacyProgressToNextLevel
     }
 
     private func handleValidatedChatSend(_ message: String) {
@@ -176,7 +147,7 @@ private struct TrainerConversationSection: View {
                 inputText: message,
                 trainerGender: trainer.preferences.gender,
                 trainerPersonality: trainer.preferences.personality,
-                intimacyLevel: currentIntimacyScore
+                intimacyLevel: intimacyLevel
             )
 
             if let response = coachMessageViewModel.response {
@@ -435,6 +406,7 @@ private struct TrainerConversationSection: View {
             TrainerIntimacyMeter(
                 level: intimacyLevel,
                 title: intimacyTitle,
+                exp: intimacyExp,
                 progress: intimacyProgress
             )
             .padding(.top, 18)
@@ -473,6 +445,7 @@ private struct TrainerConversationSection: View {
 private struct TrainerIntimacyMeter: View {
     let level: Int
     let title: String
+    let exp: Int
     let progress: Double
     @State private var isPulsing = false
 
@@ -512,6 +485,10 @@ private struct TrainerIntimacyMeter: View {
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundColor(.white.opacity(0.95))
+
+                    Text("EXP \(exp)pt")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.78))
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)

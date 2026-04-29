@@ -8,6 +8,7 @@ enum RecognitionMode { case ocr, api }
 struct FoodAddView: View {
     @StateObject private var ocrViewModel = FoodOCRViewModel()
     @ObservedObject var recordViewModel: RecordViewModel
+    @EnvironmentObject var user: User
     let selectedMeal: MealType
     @State private var foodName = ""
     @State private var calories = ""
@@ -214,6 +215,7 @@ struct FoodAddView: View {
                             mealType: selectedMeal
                         )
                         recordViewModel.addFoodEntry(newEntry)
+                        user.registerFoodRecord()
                         presentationMode.wrappedValue.dismiss()
                     }
                 }) {

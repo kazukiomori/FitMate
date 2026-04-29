@@ -494,6 +494,7 @@ struct DailyRecordCard: View {
 
 struct WeightInputView: View {
     @ObservedObject var recordViewModel: RecordViewModel
+    @EnvironmentObject var user: User
     @State private var weightText = ""
     @State private var selectedDate = Date()
     @State private var note = ""
@@ -534,6 +535,7 @@ struct WeightInputView: View {
                             date: selectedDate,
                             note: note.isEmpty ? nil : note
                         )
+                        user.registerWeightRecord()
                         presentationMode.wrappedValue.dismiss()
                     }
                 }
