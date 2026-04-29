@@ -62,6 +62,34 @@ struct HomeView: View {
     }
 }
 
+private enum IntimacyStatus: Int {
+    case firstMeeting = 1
+    case acquaintance
+    case personalTrainer
+    case trustedPartner
+    case closeFriend
+    case specialBuddy
+    case specialSupporter
+    case happyToSeeYou
+    case almostLover
+    case closestPartner
+
+    var title: String {
+        switch self {
+        case .firstMeeting: return "はじめまして"
+        case .acquaintance: return "顔なじみ"
+        case .personalTrainer: return "専属トレーナー"
+        case .trustedPartner: return "信頼できる相手"
+        case .closeFriend: return "気軽に話せる仲"
+        case .specialBuddy: return "大切な相棒"
+        case .specialSupporter: return "特別に応援したい人"
+        case .happyToSeeYou: return "会えると嬉しい人"
+        case .almostLover: return "ほっとけない存在"
+        case .closestPartner: return "いちばん近い存在"
+        }
+    }
+}
+
 private struct TrainerConversationSection: View {
     let trainer: PersonalTrainer
     let isFirstOpenToday: Bool
@@ -122,23 +150,20 @@ private struct TrainerConversationSection: View {
         sanitizedUserMessage.count
     }
 
+    private var intimacyStatus: IntimacyStatus {
+        IntimacyStatus(rawValue: max(1, min(10, currentIntimacyScore))) ?? .firstMeeting
+    }
+
     private var intimacyLevel: Int {
-        max(1, min(5, (currentIntimacyScore + 1) / 3))
+        intimacyStatus.rawValue
     }
 
     private var intimacyTitle: String {
-        switch intimacyLevel {
-        case 1: return "知り合い"
-        case 2: return "仲良し"
-        case 3: return "親友"
-        case 4: return "相棒"
-        case 5: return "特別"
-        default: return "親友"
-        }
+        intimacyStatus.title
     }
 
     private var intimacyProgress: Double {
-        min(max(Double(currentIntimacyScore) / 15.0, 0), 1)
+        min(max(Double(currentIntimacyScore) / 10.0, 0), 1)
     }
 
     private func handleValidatedChatSend(_ message: String) {
