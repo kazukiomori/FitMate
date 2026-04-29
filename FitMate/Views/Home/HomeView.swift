@@ -64,6 +64,45 @@ struct HomeView: View {
 }
 
 private struct TrainerConversationSection: View {
+    private enum PremiumChatEntryMode {
+        case none
+        case weight
+        case food
+
+        var promptMessage: String {
+            switch self {
+            case .none:
+                return ""
+            case .weight:
+                return "体重をこのままチャットで送ってね！ 例: 52.4kg"
+            case .food:
+                return "食べたものをこのままチャットで送ってね！ 例: 朝ごはんにおにぎりと味噌汁"
+            }
+        }
+
+        var inputPlaceholder: String {
+            switch self {
+            case .none:
+                return "今日の相談や気持ちを入力してください"
+            case .weight:
+                return "体重を入力してください"
+            case .food:
+                return "食事内容を入力してください"
+            }
+        }
+
+        var apiPrefix: String {
+            switch self {
+            case .none:
+                return ""
+            case .weight:
+                return "体重報告: "
+            case .food:
+                return "食事報告: "
+            }
+        }
+    }
+
     @EnvironmentObject var user: User
     let trainer: PersonalTrainer
     let isFirstOpenToday: Bool
@@ -75,6 +114,7 @@ private struct TrainerConversationSection: View {
     @State private var showingFoodAdd = false
     @State private var trainerAvatarExpression: TrainerAvatarExpression = .smile
     @State private var chatValidationMessage: String?
+    @State private var premiumChatEntryMode: PremiumChatEntryMode = .none
     @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
     @StateObject private var coachMessageViewModel = CoachMessageViewModel()
 
@@ -102,6 +142,16 @@ private struct TrainerConversationSection: View {
 
     private func handleFoodReportTap() {
         isMessageFieldFocused = false
+
+        if user.isPremiumUser {
+            premiumChatEntryMode = .food
+            playTrainerMessage(PremiumChatEntryMode.food.promptMessage) {
+                userMessage = ""
+                isMessageFieldFocused = true
+            }
+            return
+        }
+
         playTrainerMessage("何を食べたか教えてね！") {
             showingFoodAdd = true
         }
@@ -109,6 +159,16 @@ private struct TrainerConversationSection: View {
 
     private func handleWeightReportTap() {
         isMessageFieldFocused = false
+
+        if user.isPremiumUser {
+            premiumChatEntryMode = .weight
+            playTrainerMessage(PremiumChatEntryMode.weight.promptMessage) {
+                userMessage = ""
+                isMessageFieldFocused = true
+            }
+            return
+        }
+
         playTrainerMessage("今日の体重を教えてね！") {
             showingWeightInput = true
         }
@@ -142,20 +202,48 @@ private struct TrainerConversationSection: View {
         user.intimacyGainEventCount
     }
 
+    private var inputPlaceholder: String {
+        premiumChatEntryMode.inputPlaceholder
+    }
+
+    private var helperText: String {
+        switch premiumChatEntryMode {
+        case .none:
+            return "\(TrainerChatInputValidator.minimumLength)〜\(TrainerChatInputValidator.maximumLength)文字で入力"
+        case .weight:
+            return "プレミアム: チャットで体重報告できます"
+        case .food:
+            return "プレミアム: チャットで食事報告できます"
+        }
+    }
+
     private func handleValidatedChatSend(_ message: String) {
         isMessageFieldFocused = false
         chatValidationMessage = nil
         userMessage = message
+        let entryMode = premiumChatEntryMode
+        let apiMessage = entryMode.apiPrefix + message
 
         Task {
             await coachMessageViewModel.send(
-                inputText: message,
+                inputText: apiMessage,
                 trainerGender: trainer.preferences.gender,
                 trainerPersonality: trainer.preferences.personality,
                 intimacyLevel: intimacyLevel
             )
 
             if let response = coachMessageViewModel.response {
+                switch entryMode {
+                case .weight:
+                    user.registerWeightRecord()
+                    premiumChatEntryMode = .none
+                case .food:
+                    user.registerFoodRecord()
+                    premiumChatEntryMode = .none
+                case .none:
+                    break
+                }
+
                 switch response.type {
                 case .nutrition:
                     playTrainerMessage(response.comment, expression: .smile)
@@ -223,7 +311,7 @@ private struct TrainerConversationSection: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 10) {
-                            TextField("今日の相談や気持ちを入力してください", text: $userMessage, axis: .vertical)
+                            TextField(inputPlaceholder, text: $userMessage, axis: .vertical)
                                 .textFieldStyle(.plain)
                                 .lineLimit(2...4)
                                 .focused($isMessageFieldFocused)
@@ -256,7 +344,7 @@ private struct TrainerConversationSection: View {
                                     .font(.caption2)
                                     .foregroundColor(.red)
                             } else {
-                                Text("\(TrainerChatInputValidator.minimumLength)〜\(TrainerChatInputValidator.maximumLength)文字で入力")
+                                Text(helperText)
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }

@@ -7,6 +7,13 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var user: User
+
+    private var premiumToggleBinding: Binding<Bool> {
+        Binding(
+            get: { user.isPremiumUser },
+            set: { user.setPremiumUser($0) }
+        )
+    }
     
     var body: some View {
         NavigationView {
@@ -71,7 +78,22 @@ struct ProfileView: View {
                         Text("ヘルプ")
                     }
                 }
+
+                Section("テスト用") {
+                    Toggle(isOn: premiumToggleBinding) {
+                        HStack {
+                            Image(systemName: user.isPremiumUser ? "crown.fill" : "crown")
+                                .foregroundColor(user.isPremiumUser ? .yellow : .secondary)
+                            Text("課金ユーザON/OFF")
+                        }
+                    }
+
+                    Text(user.isPremiumUser ? "現在は課金ユーザとして動作します" : "現在は通常ユーザとして動作します")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
+            .navigationTitle("プロフィール")
         }
     }
 }

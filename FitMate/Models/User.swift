@@ -38,6 +38,7 @@ class User: ObservableObject {
     private enum StorageKeys {
         static let personalTrainer = "storedPersonalTrainer"
         static let intimacyProgress = "storedIntimacyProgress"
+        static let premiumUser = "storedPremiumUser"
     }
 
     private enum IntimacyReward {
@@ -87,6 +88,11 @@ class User: ObservableObject {
     @Published var activityLevel: ActivityLevel = .moderate
     @Published var targetDate: Date = Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
     @Published var isOnboardingComplete: Bool = false
+    @Published var isPremiumUser: Bool = false {
+        didSet {
+            UserDefaults.standard.set(isPremiumUser, forKey: StorageKeys.premiumUser)
+        }
+    }
     
     // パーソナルトレーナー関連
     @Published var personalTrainer: PersonalTrainer?
@@ -103,8 +109,13 @@ class User: ObservableObject {
     private var lastWeightRewardDate: Date?
 
     init() {
+        isPremiumUser = UserDefaults.standard.bool(forKey: StorageKeys.premiumUser)
         restorePersonalTrainerIfNeeded()
         restoreIntimacyProgressIfNeeded()
+    }
+
+    func setPremiumUser(_ isPremiumUser: Bool) {
+        self.isPremiumUser = isPremiumUser
     }
 
     // MARK: - Calories (Mifflin-St Jeor)
