@@ -37,8 +37,5 @@ struct MainTabView: View {
         }
         .environmentObject(user)
         .environmentObject(recordViewModel)
-        .onAppear {
-            user.registerAppLaunch()
-        }
     }
 }

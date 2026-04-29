@@ -57,6 +57,7 @@ struct HomeView: View {
         isFirstHomeOpenToday = lastHomeOpenedDayKey != todayDayKey
 
         if isFirstHomeOpenToday {
+            user.registerAppLaunchRewardOnHomeArrival()
             lastHomeOpenedDayKey = todayDayKey
         }
     }
@@ -129,12 +130,16 @@ private struct TrainerConversationSection: View {
         user.intimacyTitle
     }
 
-    private var intimacyExp: Int {
-        user.intimacyExp
-    }
-
     private var intimacyProgress: Double {
         user.intimacyProgressToNextLevel
+    }
+
+    private var intimacyGainAmount: Int {
+        user.latestIntimacyGain
+    }
+
+    private var intimacyGainTrigger: Int {
+        user.intimacyGainEventCount
     }
 
     private func handleValidatedChatSend(_ message: String) {
@@ -406,8 +411,9 @@ private struct TrainerConversationSection: View {
             TrainerIntimacyMeter(
                 level: intimacyLevel,
                 title: intimacyTitle,
-                exp: intimacyExp,
-                progress: intimacyProgress
+                progress: intimacyProgress,
+                gainAmount: intimacyGainAmount,
+                gainTrigger: intimacyGainTrigger
             )
             .padding(.top, 18)
             .padding(.leading, 18)
@@ -445,9 +451,16 @@ private struct TrainerConversationSection: View {
 private struct TrainerIntimacyMeter: View {
     let level: Int
     let title: String
-    let exp: Int
     let progress: Double
+    let gainAmount: Int
+    let gainTrigger: Int
     @State private var isPulsing = false
+    @State private var animatedProgress: Double = 0
+    @State private var displayedLevel: Int = 1
+    @State private var showGainBadge = false
+    @State private var gainBadgeOffset: CGFloat = 0
+    @State private var gainBadgeOpacity: Double = 0
+    @State private var shouldBounceHeart = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -461,7 +474,7 @@ private struct TrainerIntimacyMeter: View {
                     Heart()
                         .stroke(Color.pink, lineWidth: 2)
                         .frame(width: 43, height: 43)
-                        .scaleEffect(isPulsing ? 1.08 : 1.0)
+                        .scaleEffect(shouldBounceHeart ? 1.18 : (isPulsing ? 1.08 : 1.0))
                         .opacity(isPulsing ? 0.25 : 0.85)
 
                     Heart()
@@ -473,10 +486,26 @@ private struct TrainerIntimacyMeter: View {
                             )
                         )
                         .frame(width: 28, height: 28)
+                        .scaleEffect(shouldBounceHeart ? 1.12 : 1.0)
+
+                    if showGainBadge, gainAmount > 0 {
+                        Text("+\(gainAmount)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color(red: 1.0, green: 0.34, blue: 0.55))
+                            )
+                            .shadow(color: Color.black.opacity(0.16), radius: 6, x: 0, y: 3)
+                            .offset(x: 20, y: gainBadgeOffset)
+                            .opacity(gainBadgeOpacity)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("親密度 Lv.\(level)")
+                    Text("親密度 Lv.\(displayedLevel)")
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -485,10 +514,6 @@ private struct TrainerIntimacyMeter: View {
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundColor(.white.opacity(0.95))
-
-                    Text("EXP \(exp)pt")
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.78))
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
@@ -514,14 +539,83 @@ private struct TrainerIntimacyMeter: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: 122 * progress, height: 7)
+                    .frame(width: 122 * animatedProgress, height: 7)
             }
             .padding(.leading, 2)
         }
         .onAppear {
+            displayedLevel = level
+            animatedProgress = progress
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                 isPulsing = true
             }
+        }
+        .onChange(of: progress) { newProgress in
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                animatedProgress = newProgress
+            }
+        }
+        .onChange(of: gainTrigger) { _ in
+            guard gainAmount > 0 else { return }
+            animateGain()
+        }
+        .onChange(of: level) { newLevel in
+            displayedLevel = newLevel
+        }
+    }
+
+    private func animateGain() {
+        showGainBadge = true
+        gainBadgeOffset = 8
+        gainBadgeOpacity = 0
+
+        let targetLevel = level
+        let targetProgress = progress
+        let leveledUp = targetLevel > displayedLevel
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) {
+            shouldBounceHeart = true
+        }
+
+        withAnimation(.easeOut(duration: 0.18)) {
+            gainBadgeOpacity = 1
+            gainBadgeOffset = -8
+        }
+
+        if leveledUp {
+            withAnimation(.easeOut(duration: 0.28)) {
+                animatedProgress = 1
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                displayedLevel = targetLevel
+                animatedProgress = 0
+
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                    animatedProgress = targetProgress
+                }
+            }
+        } else {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+                animatedProgress = targetProgress
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.72)) {
+                shouldBounceHeart = false
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeIn(duration: 0.25)) {
+                gainBadgeOpacity = 0
+                gainBadgeOffset = -18
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            showGainBadge = false
         }
     }
 }

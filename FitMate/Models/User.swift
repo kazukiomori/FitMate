@@ -69,6 +69,7 @@ class User: ObservableObject {
     private struct PersistedIntimacyProgress: Codable {
         let totalExp: Int
         let loginStreak: Int
+        let lastAppLaunchAt: Date?
         let lastAppLaunchRewardDate: Date?
         let lastFoodRewardDate: Date?
         let foodRewardCountForDay: Int
@@ -92,6 +93,9 @@ class User: ObservableObject {
     @Published var hasCompletedTrainerSetup: Bool = false
     @Published private(set) var intimacyExp: Int = 0
     @Published private(set) var loginStreak: Int = 0
+    @Published private(set) var lastAppLaunchAt: Date?
+    @Published private(set) var latestIntimacyGain: Int = 0
+    @Published private(set) var intimacyGainEventCount: Int = 0
 
     private var lastAppLaunchRewardDate: Date?
     private var lastFoodRewardDate: Date?
@@ -222,8 +226,13 @@ class User: ObservableObject {
         return thresholds[intimacyLevel]
     }
 
+    func markAppLaunch(at date: Date = Date()) {
+        lastAppLaunchAt = date
+        persistIntimacyProgress()
+    }
+
     @discardableResult
-    func registerAppLaunch(on date: Date = Date()) -> Int {
+    func registerAppLaunchRewardOnHomeArrival(on date: Date = Date()) -> Int {
         let today = startOfDay(for: date)
         guard !isSameDay(lastAppLaunchRewardDate, today) else { return 0 }
 
@@ -285,6 +294,9 @@ class User: ObservableObject {
     func resetIntimacyProgress() {
         intimacyExp = 0
         loginStreak = 0
+        lastAppLaunchAt = nil
+        latestIntimacyGain = 0
+        intimacyGainEventCount = 0
         lastAppLaunchRewardDate = nil
         lastFoodRewardDate = nil
         foodRewardCountForDay = 0
@@ -317,6 +329,7 @@ class User: ObservableObject {
         let persistedProgress = PersistedIntimacyProgress(
             totalExp: intimacyExp,
             loginStreak: loginStreak,
+            lastAppLaunchAt: lastAppLaunchAt,
             lastAppLaunchRewardDate: lastAppLaunchRewardDate,
             lastFoodRewardDate: lastFoodRewardDate,
             foodRewardCountForDay: foodRewardCountForDay,
@@ -354,10 +367,13 @@ class User: ObservableObject {
 
         intimacyExp = max(0, persistedProgress.totalExp)
         loginStreak = max(0, persistedProgress.loginStreak)
+        lastAppLaunchAt = persistedProgress.lastAppLaunchAt
         lastAppLaunchRewardDate = persistedProgress.lastAppLaunchRewardDate
         lastFoodRewardDate = persistedProgress.lastFoodRewardDate
         foodRewardCountForDay = max(0, persistedProgress.foodRewardCountForDay)
         lastWeightRewardDate = persistedProgress.lastWeightRewardDate
+        latestIntimacyGain = 0
+        intimacyGainEventCount = 0
     }
 
     private func restoredPreferences(from persisted: PersistedTrainerPreferences) -> TrainerPreferences? {
@@ -381,6 +397,8 @@ class User: ObservableObject {
     private func addIntimacyExp(_ points: Int) -> Int {
         guard points > 0 else { return 0 }
         intimacyExp += points
+        latestIntimacyGain = points
+        intimacyGainEventCount += 1
         return points
     }
 
