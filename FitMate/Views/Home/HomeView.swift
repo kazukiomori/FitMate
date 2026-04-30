@@ -240,12 +240,60 @@ private struct TrainerConversationSection: View {
         case .none:
             return "\(TrainerChatInputValidator.minimumLength)〜\(TrainerChatInputValidator.maximumLength)文字で入力"
         case .weight:
-            return "プレミアム: チャットで体重報告できます"
+            return "プレミアム: 数字を含めて送信すると体重記録できます"
         case .food:
             return "プレミアム: チャットで食事報告できます"
         case .dailyChat:
             return "プレミアム/通常どちらでも日常会話できます"
         }
+    }
+
+    private func extractedWeight(from input: String) -> Double? {
+        let normalized = input
+            .folding(options: [.widthInsensitive], locale: Locale(identifier: "ja_JP"))
+            .replacingOccurrences(of: ",", with: ".")
+
+        guard let regex = try? NSRegularExpression(pattern: #"\d+(?:\.\d+)?"#) else {
+            return nil
+        }
+
+        let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
+        guard let match = regex.firstMatch(in: normalized, options: [], range: range),
+              let matchRange = Range(match.range, in: normalized) else {
+            return nil
+        }
+
+        let value = String(normalized[matchRange])
+        return Double(value)
+    }
+
+    private func handleWeightMessageSend(_ message: String) {
+        let sanitized = message.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !sanitized.isEmpty else {
+            chatValidationMessage = "体重を入力してください"
+            return
+        }
+
+        guard let weightValue = extractedWeight(from: sanitized) else {
+            chatValidationMessage = "体重の数字を含めて入力してください"
+            return
+        }
+
+        guard weightValue > 0 else {
+            chatValidationMessage = "正しい体重を入力してください"
+            return
+        }
+
+        isMessageFieldFocused = false
+        chatValidationMessage = nil
+        userMessage = sanitized
+        selectedChatInputMode = .none
+
+        recordViewModel.addWeightEntry(weight: weightValue)
+        user.registerWeightRecord()
+        playTrainerMessage("体重\(String(format: "%.1f", weightValue))kgを記録したよ！", expression: .smile)
+        userMessage = ""
     }
 
     private func handleValidatedChatSend(_ message: String) {
@@ -291,6 +339,11 @@ private struct TrainerConversationSection: View {
     }
 
     private func handleChatSendTap() {
+        if selectedChatInputMode == .weight {
+            handleWeightMessageSend(userMessage)
+            return
+        }
+
         let validationResult = TrainerChatInputValidator.validate(userMessage)
 
         guard validationResult.isValid else {
