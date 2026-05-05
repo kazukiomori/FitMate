@@ -483,6 +483,7 @@ private struct TrainerCandidate: Identifiable {
         let assetTrainers: [AssetTrainer] = [
             AssetTrainer(name: "", gender: .female, assetNamespace: "trainer1", imageNames: ["trainer1/first", "trainer1/second"]),
             AssetTrainer(name: "", gender: .female, assetNamespace: "trainer2", imageNames: ["trainer2/first", "trainer2/second"]),
+            AssetTrainer(name: "", gender: .female, assetNamespace: "trainer3", imageNames: ["trainer3/first", "trainer3/second"]),
             AssetTrainer(name: "", gender: .female, assetNamespace: nil, imageNames: ["trainer3_first", "trainer3_second"])
         ]
 
