@@ -27,21 +27,36 @@ struct HomeView: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    if let trainer = user.personalTrainer {
-                        TrainerConversationSection(
-                            trainer: trainer,
-                            isFirstOpenToday: isFirstHomeOpenToday,
-                            userMessage: $userMessage,
-                            isMessageFieldFocused: $isMessageFieldFocused,
-                            recordViewModel: recordViewModel
-                        )
-                    }
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.95, green: 0.97, blue: 1.0),
+                        Color(red: 0.98, green: 0.98, blue: 1.0)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+
+                if let trainer = user.personalTrainer {
+                    TrainerConversationSection(
+                        trainer: trainer,
+                        isFirstOpenToday: isFirstHomeOpenToday,
+                        userMessage: $userMessage,
+                        isMessageFieldFocused: $isMessageFieldFocused,
+                        recordViewModel: recordViewModel
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                } else {
+                    ContentUnavailableView(
+                        "トレーナーが未設定です",
+                        systemImage: "message.badge",
+                        description: Text("オンボーディングでトレーナーを選ぶと、ここがチャット画面になります")
+                    )
+                    .padding(.horizontal, 24)
                 }
-                .padding()
             }
-            .background(Color.gray.opacity(0.1))
             .simultaneousGesture(
                 TapGesture().onEnded {
                     isMessageFieldFocused = false
@@ -119,32 +134,51 @@ private struct TrainerConversationSection: View {
 
     @State private var showingWeightInput = false
     @State private var showingFoodAdd = false
-    @State private var trainerAvatarExpression: TrainerAvatarExpression = .smile
     @State private var chatValidationMessage: String?
+    @State private var messages: [HomeChatMessage] = []
     @State private var selectedChatInputMode: ChatInputMode = .none
-    @StateObject private var trainerMessageAnimator = TypewriterMessageAnimator()
     @StateObject private var coachMessageViewModel = CoachMessageViewModel()
 
     private var trainerMessage: String {
         trainer.getHomeMessage(isFirstOpenToday: isFirstOpenToday)
     }
 
-    private var displayedTrainerMessage: String {
-        trainerMessageAnimator.displayedText.isEmpty ? trainerMessage : trainerMessageAnimator.displayedText
+    private var trainerDisplayName: String {
+        trainer.name.isEmpty ? "トレーナー" : trainer.name
     }
 
-    private func setTrainerAvatarExpression(_ expression: TrainerAvatarExpression) {
-        trainerAvatarExpression = expression
+    private var trainerSmileImage: UIImage? {
+        trainer.avatarImage(for: .smile) ?? trainer.image
     }
 
-    private func playTrainerMessage(
+    private func appendTrainerMessage(
         _ message: String,
         expression: TrainerAvatarExpression = .smile,
-        characterInterval: UInt64 = 45_000_000,
         completion: (() -> Void)? = nil
     ) {
-        setTrainerAvatarExpression(expression)
-        trainerMessageAnimator.play(message, characterInterval: characterInterval, completion: completion)
+        messages.append(
+            HomeChatMessage(
+                sender: .trainer,
+                text: message,
+                expression: expression
+            )
+        )
+        completion?()
+    }
+
+    private func appendUserMessage(_ message: String) {
+        messages.append(
+            HomeChatMessage(
+                sender: .user,
+                text: message,
+                expression: nil
+            )
+        )
+    }
+
+    private func ensureInitialGreetingIfNeeded() {
+        guard messages.isEmpty else { return }
+        appendTrainerMessage(trainerMessage)
     }
 
     private func handleFoodReportTap() {
@@ -157,14 +191,14 @@ private struct TrainerConversationSection: View {
         selectedChatInputMode = .food
 
         if user.isPremiumUser {
-            playTrainerMessage(ChatInputMode.food.promptMessage) {
+            appendTrainerMessage(ChatInputMode.food.promptMessage) {
                 userMessage = ""
                 isMessageFieldFocused = true
             }
             return
         }
 
-        playTrainerMessage("何を食べたか教えてね！") {
+        appendTrainerMessage("何を食べたか教えてね！") {
             showingFoodAdd = true
         }
     }
@@ -179,14 +213,14 @@ private struct TrainerConversationSection: View {
         selectedChatInputMode = .weight
 
         if user.isPremiumUser {
-            playTrainerMessage(ChatInputMode.weight.promptMessage) {
+            appendTrainerMessage(ChatInputMode.weight.promptMessage) {
                 userMessage = ""
                 isMessageFieldFocused = true
             }
             return
         }
 
-        playTrainerMessage("今日の体重を教えてね！") {
+        appendTrainerMessage("今日の体重を教えてね！") {
             showingWeightInput = true
         }
     }
@@ -198,7 +232,7 @@ private struct TrainerConversationSection: View {
         }
 
         selectedChatInputMode = .dailyChat
-        playTrainerMessage(ChatInputMode.dailyChat.promptMessage) {
+        appendTrainerMessage(ChatInputMode.dailyChat.promptMessage) {
             isMessageFieldFocused = true
         }
     }
@@ -233,6 +267,19 @@ private struct TrainerConversationSection: View {
 
     private var inputPlaceholder: String {
         selectedChatInputMode.inputPlaceholder
+    }
+
+    private var selectedModeTitle: String? {
+        switch selectedChatInputMode {
+        case .none:
+            return nil
+        case .weight:
+            return "体重報告モード"
+        case .food:
+            return "食事報告モード"
+        case .dailyChat:
+            return "日常会話モード"
+        }
     }
 
     private var helperText: String {
@@ -287,19 +334,21 @@ private struct TrainerConversationSection: View {
 
         isMessageFieldFocused = false
         chatValidationMessage = nil
+        appendUserMessage(sanitized)
         userMessage = sanitized
         selectedChatInputMode = .none
 
         recordViewModel.addWeightEntry(weight: weightValue)
         user.registerWeightRecord()
-        playTrainerMessage("体重\(String(format: "%.1f", weightValue))kgを記録したよ！", expression: .smile)
+        appendTrainerMessage("体重\(String(format: "%.1f", weightValue))kgを記録したよ！", expression: .smile)
         userMessage = ""
     }
 
     private func handleValidatedChatSend(_ message: String) {
         isMessageFieldFocused = false
         chatValidationMessage = nil
-        userMessage = message
+        appendUserMessage(message)
+        userMessage = ""
         let entryMode = selectedChatInputMode
         let apiMessage = entryMode.apiPrefix + message
         selectedChatInputMode = .none
@@ -326,14 +375,14 @@ private struct TrainerConversationSection: View {
 
                 switch response.type {
                 case .nutrition:
-                    playTrainerMessage(response.comment, expression: .smile)
+                    appendTrainerMessage(response.comment, expression: .smile)
 
                 case .chat:
-                    playTrainerMessage(response.comment, expression: .smile)
+                    appendTrainerMessage(response.comment, expression: .smile)
                 }
             } else if let errorMessage = coachMessageViewModel.errorMessage {
                 chatValidationMessage = errorMessage
-                setTrainerAvatarExpression(.sad)
+                appendTrainerMessage(errorMessage, expression: .sad)
             }
         }
     }
@@ -355,116 +404,32 @@ private struct TrainerConversationSection: View {
     }
 
     var body: some View {
-        VStack(spacing: 18) {
-            trainerHeroImage
+        VStack(spacing: 0) {
+            chatHeader
 
-            VStack(spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    trainerAvatar
+            Divider()
+                .overlay(Color.black.opacity(0.05))
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(trainer.name.isEmpty ? "あなたのトレーナー" : trainer.name)
-                            .font(.headline)
-                            .foregroundColor(.primary)
-
-                        Text(displayedTrainerMessage)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .lineSpacing(5)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 22)
-                                .fill(Color.white)
-
-                            TrainerSpeechBubbleTail()
-                                .fill(Color.white)
-                                .frame(width: 14, height: 18)
-                                .offset(x: -8, y: 10)
-                        }
-                    )
-
-                    Spacer(minLength: 0)
-                }
+            VStack(spacing: 18) {
+                chatTimeline
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                 quickActionButtons
 
-                HStack(alignment: .bottom, spacing: 12) {
-                    Spacer(minLength: 32)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 10) {
-                            TextField(inputPlaceholder, text: $userMessage, axis: .vertical)
-                                .textFieldStyle(.plain)
-                                .lineLimit(2...4)
-                                .focused($isMessageFieldFocused)
-
-                            Button(action: {
-                                handleChatSendTap()
-                            }) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.black)
-                                        .frame(width: 38, height: 38)
-
-                                    if coachMessageViewModel.isLoading {
-                                        ProgressView()
-                                            .tint(.white)
-                                            .scaleEffect(0.7)
-                                    } else {
-                                        Image(systemName: "paperplane.fill")
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                            }
-                            .disabled(coachMessageViewModel.isLoading)
-                        }
-
-                        HStack(spacing: 8) {
-                            if let chatValidationMessage {
-                                Text(chatValidationMessage)
-                                    .font(.caption2)
-                                    .foregroundColor(.red)
-                            } else {
-                                Text(helperText)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer(minLength: 0)
-
-                            Text("\(currentMessageCount)/\(TrainerChatInputValidator.maximumLength)")
-                                .font(.caption2)
-                                .foregroundColor(currentMessageCount > TrainerChatInputValidator.maximumLength ? .red : .secondary)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(Color(red: 0.97, green: 0.97, blue: 0.98))
-                    .clipShape(RoundedRectangle(cornerRadius: 22))
-                }
+                composerSection
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
         }
-        .padding(18)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.99, green: 0.97, blue: 0.95),
-                    Color(red: 0.95, green: 0.96, blue: 1.0)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28)
-                .stroke(Color.white.opacity(0.7), lineWidth: 1)
+                .stroke(Color.white.opacity(0.9), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 14, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.08), radius: 20, x: 0, y: 10)
         .sheet(isPresented: $showingWeightInput) {
             WeightInputView(recordViewModel: recordViewModel)
         }
@@ -472,10 +437,12 @@ private struct TrainerConversationSection: View {
             FoodAddView(recordViewModel: recordViewModel, selectedMeal: .breakfast)
         }
         .onAppear {
-            trainerMessageAnimator.setImmediately(trainerMessage)
+            ensureInitialGreetingIfNeeded()
         }
         .onChange(of: isFirstOpenToday) { _ in
-            trainerMessageAnimator.setImmediately(trainerMessage)
+            if messages.isEmpty {
+                ensureInitialGreetingIfNeeded()
+            }
         }
         .onChange(of: userMessage) { _ in
             if chatValidationMessage != nil {
@@ -484,123 +451,20 @@ private struct TrainerConversationSection: View {
         }
     }
 
-    private var quickActionButtons: some View {
-        HStack(spacing: 10) {
-            HomeQuickActionButton(
-                title: "体重を報告",
-                icon: "scalemass.fill",
-                isSelected: selectedChatInputMode == .weight,
-                foregroundColor: .white,
-                iconForegroundColor: Color(red: 0.31, green: 0.74, blue: 0.47),
-                background: LinearGradient(
-                    colors: [
-                        Color(red: 0.40, green: 0.84, blue: 0.55),
-                        Color(red: 0.30, green: 0.74, blue: 0.46)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            ) {
-                handleWeightReportTap()
-            }
-
-            HomeQuickActionButton(
-                title: "食事を報告",
-                icon: "fork.knife",
-                isSelected: selectedChatInputMode == .food,
-                foregroundColor: .black,
-                iconForegroundColor: .black,
-                background: LinearGradient(
-                    colors: [
-                        Color(red: 1.00, green: 0.86, blue: 0.30),
-                        Color(red: 1.00, green: 0.78, blue: 0.14)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            ) {
-                handleFoodReportTap()
-            }
-
-            HomeQuickActionButton(
-                title: "日常会話",
-                icon: "ellipsis.message.fill",
-                isSelected: selectedChatInputMode == .dailyChat,
-                foregroundColor: .white,
-                iconForegroundColor: Color(red: 0.36, green: 0.58, blue: 0.93),
-                background: LinearGradient(
-                    colors: [
-                        Color(red: 0.63, green: 0.81, blue: 1.00),
-                        Color(red: 0.46, green: 0.68, blue: 0.95)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            ) {
-                handleDailyChatTap()
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var trainerHeroImage: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 24)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.98, green: 0.90, blue: 0.90),
-                            Color(red: 0.96, green: 0.95, blue: 1.0)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            if let image = trainer.image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "person.crop.rectangle")
-                        .font(.system(size: 42))
-                        .foregroundColor(.pink.opacity(0.7))
-
-                    Text("Trainer")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 250)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .overlay(
-            LinearGradient(
-                colors: [Color.clear, Color.black.opacity(0.2)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-        )
-        .overlay(alignment: .bottomLeading) {
+    private var chatHeader: some View {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
+                Text(trainerDisplayName)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
                 Text(isFirstOpenToday ? "今日のあいさつ" : "トレーナーチャット")
                     .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white.opacity(0.9))
-
-                Text(trainer.name.isEmpty ? "あなたのトレーナー" : trainer.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.secondary)
             }
-            .padding(18)
-        }
-        .overlay(alignment: .topLeading) {
+
+            Spacer(minLength: 12)
+
             TrainerIntimacyMeter(
                 level: intimacyLevel,
                 title: intimacyTitle,
@@ -608,35 +472,339 @@ private struct TrainerConversationSection: View {
                 gainAmount: intimacyGainAmount,
                 gainTrigger: intimacyGainTrigger
             )
-            .padding(.top, 18)
-            .padding(.leading, 18)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.96),
+                    Color(red: 0.96, green: 0.97, blue: 1.0)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    private var chatTimeline: some View {
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Spacer(minLength: 0)
+
+                        Text("Today")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.05), in: Capsule())
+
+                        Spacer(minLength: 0)
+                    }
+
+                    ForEach(messages) { message in
+                        HomeChatBubbleRow(
+                            message: message,
+                            trainerName: trainerDisplayName,
+                            trainerImage: trainerSmileImage
+                        )
+                        .id(message.id)
+                    }
+
+                    if coachMessageViewModel.isLoading {
+                        HomeTypingIndicatorRow(
+                            trainerName: trainerDisplayName,
+                            trainerImage: trainerSmileImage
+                        )
+                        .id("typing-indicator")
+                    }
+                }
+                .padding(.bottom, 6)
+            }
+            .onAppear {
+                ensureInitialGreetingIfNeeded()
+            }
+            .onChange(of: messages.count) { _ in
+                guard let lastID = messages.last?.id else { return }
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo(lastID, anchor: .bottom)
+                }
+            }
+            .onChange(of: coachMessageViewModel.isLoading) { isLoading in
+                guard isLoading else { return }
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo("typing-indicator", anchor: .bottom)
+                }
+            }
         }
     }
 
-    private var trainerAvatar: some View {
-        Group {
-            if let image = trainer.avatarImage(for: trainerAvatarExpression) {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                Image(systemName: "person.crop.circle.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .padding(8)
-                    .foregroundColor(.pink.opacity(0.8))
-                    .background(Color.white)
+    private var quickActionButtons: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("クイックアクション")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.secondary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    HomeQuickActionButton(
+                        title: "体重を報告",
+                        icon: "scalemass.fill",
+                        isSelected: selectedChatInputMode == .weight,
+                        foregroundColor: .white,
+                        iconForegroundColor: Color(red: 0.31, green: 0.74, blue: 0.47),
+                        background: LinearGradient(
+                            colors: [
+                                Color(red: 0.40, green: 0.84, blue: 0.55),
+                                Color(red: 0.30, green: 0.74, blue: 0.46)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    ) {
+                        handleWeightReportTap()
+                    }
+
+                    HomeQuickActionButton(
+                        title: "食事を報告",
+                        icon: "fork.knife",
+                        isSelected: selectedChatInputMode == .food,
+                        foregroundColor: .black,
+                        iconForegroundColor: .black,
+                        background: LinearGradient(
+                            colors: [
+                                Color(red: 1.00, green: 0.86, blue: 0.30),
+                                Color(red: 1.00, green: 0.78, blue: 0.14)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    ) {
+                        handleFoodReportTap()
+                    }
+
+                    HomeQuickActionButton(
+                        title: "日常会話",
+                        icon: "ellipsis.message.fill",
+                        isSelected: selectedChatInputMode == .dailyChat,
+                        foregroundColor: .white,
+                        iconForegroundColor: Color(red: 0.36, green: 0.58, blue: 0.93),
+                        background: LinearGradient(
+                            colors: [
+                                Color(red: 0.63, green: 0.81, blue: 1.00),
+                                Color(red: 0.46, green: 0.68, blue: 0.95)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    ) {
+                        handleDailyChatTap()
+                    }
+                }
+                .padding(.vertical, 2)
             }
         }
-        .frame(width: 48, height: 48)
-        .background(Color.white)
-        .clipShape(Circle())
-        .overlay(
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var composerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let selectedModeTitle {
+                Text(selectedModeTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(Color(red: 0.28, green: 0.47, blue: 0.88))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(red: 0.90, green: 0.94, blue: 1.0), in: Capsule())
+            }
+
+            HStack(alignment: .bottom, spacing: 10) {
+                TextField(inputPlaceholder, text: $userMessage, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .lineLimit(1...4)
+                    .focused($isMessageFieldFocused)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Color(red: 0.97, green: 0.97, blue: 0.98), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+                Button(action: {
+                    handleChatSendTap()
+                }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.black)
+                            .frame(width: 44, height: 44)
+
+                        if coachMessageViewModel.isLoading {
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(0.75)
+                        } else {
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .disabled(coachMessageViewModel.isLoading)
+            }
+
+            HStack(spacing: 8) {
+                if let chatValidationMessage {
+                    Text(chatValidationMessage)
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                } else {
+                    Text(helperText)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Text("\(currentMessageCount)/\(TrainerChatInputValidator.maximumLength)")
+                    .font(.caption2)
+                    .foregroundColor(currentMessageCount > TrainerChatInputValidator.maximumLength ? .red : .secondary)
+            }
+        }
+    }
+}
+
+private struct HomeChatMessage: Identifiable {
+    enum Sender {
+        case trainer
+        case user
+    }
+
+    let id = UUID()
+    let sender: Sender
+    let text: String
+    let expression: TrainerAvatarExpression?
+}
+
+private struct HomeChatBubbleRow: View {
+    let message: HomeChatMessage
+    let trainerName: String
+    let trainerImage: UIImage?
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if message.sender == .trainer {
+                trainerAvatar
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trainerName)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    trainerBubble
+                }
+
+                Spacer(minLength: 40)
+            } else {
+                Spacer(minLength: 40)
+
+                userBubble
+            }
+        }
+    }
+
+    private var trainerBubble: some View {
+        Text(message.text)
+            .font(.subheadline)
+            .foregroundColor(.primary)
+            .lineSpacing(4)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
+    }
+
+    private var userBubble: some View {
+        Text(message.text)
+            .font(.subheadline)
+            .foregroundColor(.primary)
+            .lineSpacing(4)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(red: 0.78, green: 0.96, blue: 0.45))
+            )
+    }
+
+    @ViewBuilder
+    private var trainerAvatar: some View {
+        if let trainerImage {
+            Image(uiImage: trainerImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 34, height: 34)
+                .clipShape(Circle())
+        } else {
             Circle()
-                .stroke(Color.white, lineWidth: 2)
-        )
-        .onAppear {
-            setTrainerAvatarExpression(.smile)
+                .fill(Color.gray.opacity(0.15))
+                .frame(width: 34, height: 34)
+                .overlay(
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.gray)
+                )
+        }
+    }
+}
+
+private struct HomeTypingIndicatorRow: View {
+    let trainerName: String
+    let trainerImage: UIImage?
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if let trainerImage {
+                Image(uiImage: trainerImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 34, height: 34)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(Color.gray.opacity(0.15))
+                    .frame(width: 34, height: 34)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(trainerName)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 6) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Circle()
+                            .fill(Color.gray.opacity(0.55))
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+            }
+
+            Spacer(minLength: 40)
         }
     }
 }
@@ -660,13 +828,13 @@ private struct TrainerIntimacyMeter: View {
             HStack(spacing: 8) {
                 ZStack {
                     Heart()
-                        .fill(Color.pink.opacity(0.3))
-                        .frame(width: 50, height: 50)
-                        .blur(radius: isPulsing ? 9 : 3)
+                        .fill(Color.pink.opacity(0.2))
+                        .frame(width: 38, height: 38)
+                        .blur(radius: isPulsing ? 7 : 2)
 
                     Heart()
                         .stroke(Color.pink, lineWidth: 2)
-                        .frame(width: 43, height: 43)
+                        .frame(width: 32, height: 32)
                         .scaleEffect(shouldBounceHeart ? 1.18 : (isPulsing ? 1.08 : 1.0))
                         .opacity(isPulsing ? 0.25 : 0.85)
 
@@ -678,21 +846,21 @@ private struct TrainerIntimacyMeter: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 28, height: 28)
+                        .frame(width: 22, height: 22)
                         .scaleEffect(shouldBounceHeart ? 1.12 : 1.0)
 
                     if showGainBadge, gainAmount > 0 {
                         Text("+\(gainAmount)")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
                             .background(
                                 Capsule()
                                     .fill(Color(red: 1.0, green: 0.34, blue: 0.55))
                             )
                             .shadow(color: Color.black.opacity(0.16), radius: 6, x: 0, y: 3)
-                            .offset(x: 20, y: gainBadgeOffset)
+                            .offset(x: 16, y: gainBadgeOffset)
                             .opacity(gainBadgeOpacity)
                     }
                 }
@@ -701,28 +869,19 @@ private struct TrainerIntimacyMeter: View {
                     Text("親密度 Lv.\(displayedLevel)")
                         .font(.caption)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
 
-                    Text("\"\(title)\"")
+                    Text(title)
                         .font(.caption2)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white.opacity(0.95))
+                        .foregroundColor(.secondary)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.black.opacity(0.45))
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                )
-
-                Spacer(minLength: 0)
             }
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(width: 122, height: 7)
+                    .fill(Color.black.opacity(0.08))
+                    .frame(width: 112, height: 6)
 
                 Capsule()
                     .fill(
@@ -732,10 +891,12 @@ private struct TrainerIntimacyMeter: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: 122 * animatedProgress, height: 7)
+                    .frame(width: 112 * animatedProgress, height: 6)
             }
-            .padding(.leading, 2)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.black.opacity(0.03), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .onAppear {
             displayedLevel = level
             animatedProgress = progress
@@ -852,27 +1013,25 @@ private struct HomeQuickActionButton<Background: ShapeStyle>: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                HStack(spacing: 7) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.white.opacity(0.22))
-                            .frame(width: 20, height: 20)
+            HStack(spacing: 7) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.22))
+                        .frame(width: 20, height: 20)
 
-                        Image(systemName: icon)
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(iconForegroundColor)
-                    }
-
-                    Text(title)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(foregroundColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                    Image(systemName: icon)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(iconForegroundColor)
                 }
+
+                Text(title)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
             .padding(.horizontal, 12)
-            .frame(height: 40)
+            .frame(height: 38)
             .background(background, in: Capsule())
             .saturation(isSelected ? 1.15 : 0.88)
             .brightness(isSelected ? -0.03 : 0)
@@ -881,27 +1040,10 @@ private struct HomeQuickActionButton<Background: ShapeStyle>: View {
                 Capsule()
                     .stroke(Color.white.opacity(isSelected ? 0.34 : 0.18), lineWidth: isSelected ? 1.5 : 1)
             )
-            .shadow(color: Color.black.opacity(isSelected ? 0.18 : 0.12), radius: isSelected ? 14 : 10, x: 0, y: isSelected ? 7 : 5)
+            .shadow(color: Color.black.opacity(isSelected ? 0.12 : 0.08), radius: isSelected ? 10 : 6, x: 0, y: isSelected ? 4 : 2)
         }
         .animation(.easeInOut(duration: 0.18), value: isSelected)
         .buttonStyle(.plain)
-    }
-}
-
-private struct TrainerSpeechBubbleTail: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addQuadCurve(
-            to: CGPoint(x: rect.minX, y: rect.midY),
-            control: CGPoint(x: rect.midX, y: rect.minY)
-        )
-        path.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.maxY),
-            control: CGPoint(x: rect.midX, y: rect.maxY)
-        )
-        path.closeSubpath()
-        return path
     }
 }
 
