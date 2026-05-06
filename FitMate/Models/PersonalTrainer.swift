@@ -44,6 +44,29 @@ struct PersonalTrainer {
             ?? UIImage(named: "\(assetNamespace)_\(expression.rawValue)")
             ?? image
     }
+
+    func profileImage(named imageName: String) -> UIImage? {
+        let fallbackImage: UIImage? = switch imageName {
+        case "first":
+            images.first
+        case "second":
+            images.count > 1 ? images[1] : images.first
+        case "smile":
+            avatarImage(for: .smile)
+        case "angry":
+            avatarImage(for: .angry)
+        case "sad":
+            avatarImage(for: .sad)
+        default:
+            nil
+        }
+
+        guard let assetNamespace else { return fallbackImage }
+
+        return UIImage(named: "\(assetNamespace)/\(imageName)")
+            ?? UIImage(named: "\(assetNamespace)_\(imageName)")
+            ?? fallbackImage
+    }
     
     static func generateMessages(for preferences: TrainerPreferences) -> [String] {
         switch preferences.personality {
@@ -106,5 +129,40 @@ struct PersonalTrainer {
         case .motivational:
             return "今日もアプリを開いてくれてありがとう。この一回が理想の自分に近づく一歩です"
         }
+    }
+}
+
+extension PersonalTrainer {
+    var resolvedDisplayName: String {
+        if !name.isEmpty {
+            return name
+        }
+
+        if let fullName = profile?.name.full, !fullName.isEmpty {
+            return fullName
+        }
+
+        return defaultDisplayName
+    }
+
+    var resolvedAgeText: String {
+        if let age = profile?.age {
+            return "\(age)歳"
+        }
+
+        return preferences.age.rawValue
+    }
+
+    var resolvedGenderText: String {
+        preferences.gender.rawValue
+    }
+
+    private var defaultDisplayName: String {
+        guard let assetNamespace, assetNamespace.hasPrefix("trainer") else {
+            return "トレーナー"
+        }
+
+        let suffix = assetNamespace.replacingOccurrences(of: "trainer", with: "")
+        return suffix.isEmpty ? "トレーナー" : "トレーナー\(suffix)"
     }
 }

@@ -134,6 +134,7 @@ private struct TrainerConversationSection: View {
 
     @State private var showingWeightInput = false
     @State private var showingFoodAdd = false
+    @State private var showingTrainerProfile = false
     @State private var chatValidationMessage: String?
     @State private var messages: [HomeChatMessage] = []
     @State private var selectedChatInputMode: ChatInputMode = .none
@@ -144,7 +145,7 @@ private struct TrainerConversationSection: View {
     }
 
     private var trainerDisplayName: String {
-        trainer.name.isEmpty ? "トレーナー" : trainer.name
+        trainer.resolvedDisplayName
     }
 
     private var trainerSmileImage: UIImage? {
@@ -436,6 +437,9 @@ private struct TrainerConversationSection: View {
         .sheet(isPresented: $showingFoodAdd) {
             FoodAddView(recordViewModel: recordViewModel, selectedMeal: .breakfast)
         }
+        .sheet(isPresented: $showingTrainerProfile) {
+            TrainerProfileDetailView(trainer: trainer)
+        }
         .onAppear {
             ensureInitialGreetingIfNeeded()
         }
@@ -453,6 +457,32 @@ private struct TrainerConversationSection: View {
 
     private var chatHeader: some View {
         HStack(alignment: .center, spacing: 12) {
+            Button {
+                showingTrainerProfile = true
+            } label: {
+                Group {
+                    if let trainerSmileImage {
+                        Image(uiImage: trainerSmileImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Circle()
+                            .fill(Color.gray.opacity(0.15))
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.gray)
+                            )
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                )
+            }
+            .buttonStyle(.plain)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(trainerDisplayName)
                     .font(.headline)
@@ -508,7 +538,10 @@ private struct TrainerConversationSection: View {
                         HomeChatBubbleRow(
                             message: message,
                             trainerName: trainerDisplayName,
-                            trainerImage: trainerSmileImage
+                            trainerImage: trainerSmileImage,
+                            onTrainerTap: {
+                                showingTrainerProfile = true
+                            }
                         )
                         .id(message.id)
                     }
@@ -516,7 +549,10 @@ private struct TrainerConversationSection: View {
                     if coachMessageViewModel.isLoading {
                         HomeTypingIndicatorRow(
                             trainerName: trainerDisplayName,
-                            trainerImage: trainerSmileImage
+                            trainerImage: trainerSmileImage,
+                            onTrainerTap: {
+                                showingTrainerProfile = true
+                            }
                         )
                         .id("typing-indicator")
                     }
@@ -688,6 +724,7 @@ private struct HomeChatBubbleRow: View {
     let message: HomeChatMessage
     let trainerName: String
     let trainerImage: UIImage?
+    let onTrainerTap: () -> Void
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -743,31 +780,7 @@ private struct HomeChatBubbleRow: View {
 
     @ViewBuilder
     private var trainerAvatar: some View {
-        if let trainerImage {
-            Image(uiImage: trainerImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 34, height: 34)
-                .clipShape(Circle())
-        } else {
-            Circle()
-                .fill(Color.gray.opacity(0.15))
-                .frame(width: 34, height: 34)
-                .overlay(
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.gray)
-                )
-        }
-    }
-}
-
-private struct HomeTypingIndicatorRow: View {
-    let trainerName: String
-    let trainerImage: UIImage?
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        Button(action: onTrainerTap) {
             if let trainerImage {
                 Image(uiImage: trainerImage)
                     .resizable()
@@ -778,7 +791,38 @@ private struct HomeTypingIndicatorRow: View {
                 Circle()
                     .fill(Color.gray.opacity(0.15))
                     .frame(width: 34, height: 34)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.gray)
+                    )
             }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct HomeTypingIndicatorRow: View {
+    let trainerName: String
+    let trainerImage: UIImage?
+    let onTrainerTap: () -> Void
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            Button(action: onTrainerTap) {
+                if let trainerImage {
+                    Image(uiImage: trainerImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 34, height: 34)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 34, height: 34)
+                }
+            }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(trainerName)

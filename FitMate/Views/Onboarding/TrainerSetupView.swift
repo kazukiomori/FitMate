@@ -196,6 +196,12 @@ struct TrainerSetupView: View {
                     TrainerCardImageCarousel(images: trainer.images)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
+                    TrainerSelectionIdentityBlock(
+                        name: trainer.selectionDisplayName,
+                        ageText: trainer.selectionAgeText,
+                        genderText: trainer.selectionGenderText
+                    )
+
                     VStack(alignment: .leading, spacing: 10) {
                         Text("性格")
                             .font(.subheadline.weight(.semibold))
@@ -356,7 +362,7 @@ struct TrainerSetupView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
             dragOffset = .zero
             let trainer = PersonalTrainer(
-                name: candidate.name,
+                name: candidate.displayName,
                 preferences: candidate.preferences,
                 images: candidate.images,
                 assetNamespace: candidate.assetNamespace
@@ -558,6 +564,14 @@ private struct TrainerSwipeCard: View {
                     .padding(14)
                     .allowsHitTesting(false)
             }
+
+            TrainerSelectionIdentityBlock(
+                name: candidate.displayName,
+                ageText: candidate.displayAgeText,
+                genderText: candidate.displayGenderText
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
         .background(
             RoundedRectangle(cornerRadius: 20)
@@ -723,10 +737,12 @@ private struct TrainerDedicatedCard: View {
                     )
             }
 
-            Text(trainer.name)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(AoiOnboardingTheme.textPrimary)
+            TrainerSelectionIdentityBlock(
+                name: trainer.selectionDisplayName,
+                ageText: trainer.selectionAgeText,
+                genderText: trainer.selectionGenderText,
+                alignment: .center
+            )
 
             Text(trainer.preferences.personality.description)
                 .font(.subheadline)
@@ -756,6 +772,117 @@ private struct TrainerDedicatedCard: View {
         )
         .shadow(color: AoiOnboardingTheme.shadow, radius: 12, x: 0, y: 6)
     }
+}
+
+private struct TrainerSelectionIdentityBlock: View {
+    let name: String
+    let ageText: String
+    let genderText: String
+    var alignment: HorizontalAlignment = .leading
+
+    var body: some View {
+        VStack(alignment: alignment, spacing: 10) {
+            Text(name)
+                .font(.title3.weight(.bold))
+                .foregroundColor(AoiOnboardingTheme.textPrimary)
+                .multilineTextAlignment(alignment == .center ? .center : .leading)
+
+            HStack(spacing: 8) {
+                TrainerInfoChip(icon: "calendar", text: ageText)
+                TrainerInfoChip(icon: "person.fill", text: genderText)
+            }
+            .frame(maxWidth: .infinity, alignment: alignment == .center ? .center : .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: alignment == .center ? .center : .leading)
+    }
+}
+
+private struct TrainerInfoChip: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+
+            Text(text)
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundColor(AoiOnboardingTheme.accent)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            Capsule()
+                .fill(AoiOnboardingTheme.accentSoft)
+        )
+    }
+}
+
+private extension TrainerCandidate {
+    var profile: TrainerProfile? {
+        guard let assetNamespace else { return nil }
+        return TrainerProfileCatalog.profile(for: assetNamespace)
+    }
+
+    var displayName: String {
+        if !name.isEmpty {
+            return name
+        }
+
+        if let fullName = profile?.name.full, !fullName.isEmpty {
+            return fullName
+        }
+
+        return defaultTrainerDisplayName(assetNamespace: assetNamespace)
+    }
+
+    var displayAgeText: String {
+        if let age = profile?.age {
+            return "\(age)歳"
+        }
+
+        return preferences.age.rawValue
+    }
+
+    var displayGenderText: String {
+        preferences.gender.rawValue
+    }
+}
+
+private extension PersonalTrainer {
+    var selectionDisplayName: String {
+        if !name.isEmpty {
+            return name
+        }
+
+        if let fullName = profile?.name.full, !fullName.isEmpty {
+            return fullName
+        }
+
+        return defaultTrainerDisplayName(assetNamespace: assetNamespace)
+    }
+
+    var selectionAgeText: String {
+        if let age = profile?.age {
+            return "\(age)歳"
+        }
+
+        return preferences.age.rawValue
+    }
+
+    var selectionGenderText: String {
+        preferences.gender.rawValue
+    }
+}
+
+private func defaultTrainerDisplayName(assetNamespace: String?) -> String {
+    guard let assetNamespace, assetNamespace.hasPrefix("trainer") else {
+        return "トレーナー"
+    }
+
+    let suffix = assetNamespace.replacingOccurrences(of: "trainer", with: "")
+    return suffix.isEmpty ? "トレーナー" : "トレーナー\(suffix)"
 }
 
 
