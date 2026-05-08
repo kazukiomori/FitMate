@@ -4,15 +4,22 @@ struct TrainerProfileDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let trainer: PersonalTrainer
+    @State private var selectedImageIndex = 0
 
     private let galleryImageNames = ["first", "second", "smile", "angry", "sad"]
+
+    private var galleryItems: [(name: String, image: UIImage?)] {
+        galleryImageNames.map { imageName in
+            (name: imageName, image: trainer.profileImage(named: imageName))
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
+                    topImageSliderSection
                     headerSection
-                    imageGallerySection
                     profileContentSection
                 }
                 .padding(.horizontal, 16)
@@ -20,8 +27,6 @@ struct TrainerProfileDetailView: View {
                 .padding(.bottom, 28)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(trainer.resolvedDisplayName)
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("閉じる") {
@@ -32,34 +37,48 @@ struct TrainerProfileDetailView: View {
         }
     }
 
+    private var topImageSliderSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(trainer.resolvedDisplayName)
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.primary)
+
+                if let profile = trainer.profile {
+                    Text(profile.name.reading)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            TabView(selection: $selectedImageIndex) {
+                ForEach(Array(galleryItems.enumerated()), id: \.offset) { index, item in
+                    TrainerProfileHeroImageCard(image: item.image)
+                    .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .frame(height: 380)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+    }
+
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
-                trainerPrimaryAvatar
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
+                ],
+                spacing: 10
+            ) {
+                ProfileInfoBadge(title: "年齢", value: trainer.resolvedAgeText, icon: "calendar")
+                ProfileInfoBadge(title: "性別", value: trainer.resolvedGenderText, icon: "person.fill")
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(trainer.resolvedDisplayName)
-                        .font(.title2.weight(.bold))
-                        .foregroundColor(.primary)
-
-                    if let profile = trainer.profile {
-                        Text(profile.name.reading)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-
-                    HStack(spacing: 8) {
-                        ProfileChip(text: trainer.resolvedAgeText, icon: "calendar")
-                        ProfileChip(text: trainer.resolvedGenderText, icon: "person.fill")
-
-                        if let profile = trainer.profile {
-                            ProfileChip(text: "\(profile.heightCm)cm", icon: "ruler")
-                            ProfileChip(text: "\(profile.weightKg)kg", icon: "scalemass")
-                        }
-                    }
+                if let profile = trainer.profile {
+                    ProfileInfoBadge(title: "身長", value: "\(profile.heightCm)cm", icon: "ruler")
+                    ProfileInfoBadge(title: "体重", value: "\(profile.weightKg)kg", icon: "scalemass")
                 }
-
-                Spacer(minLength: 0)
             }
 
             if let summary = trainer.profile?.otherInfo.summary {
@@ -68,29 +87,6 @@ struct TrainerProfileDetailView: View {
                         .font(.subheadline)
                         .foregroundColor(.primary)
                         .lineSpacing(5)
-                }
-            }
-        }
-    }
-
-    private var imageGallerySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("トレーナー画像")
-                .font(.headline)
-                .foregroundColor(.primary)
-
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 12),
-                    GridItem(.flexible(), spacing: 12)
-                ],
-                spacing: 12
-            ) {
-                ForEach(galleryImageNames, id: \.self) { imageName in
-                    TrainerProfileImageCard(
-                        title: imageName,
-                        image: trainer.profileImage(named: imageName)
-                    )
                 }
             }
         }
@@ -240,65 +236,33 @@ struct TrainerProfileDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private var trainerPrimaryAvatar: some View {
-        if let image = trainer.profileImage(named: "smile") ?? trainer.profileImage(named: "first") {
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 88, height: 88)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white, lineWidth: 3)
-                )
-                .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
-        } else {
-            Circle()
-                .fill(Color.gray.opacity(0.15))
-                .frame(width: 88, height: 88)
-                .overlay(
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(.gray)
-                )
-        }
-    }
 }
 
-private struct TrainerProfileImageCard: View {
-    let title: String
+private struct TrainerProfileHeroImageCard: View {
     let image: UIImage?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(.secondary)
+        ZStack {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
 
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(18)
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: "photo")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary)
 
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .padding(10)
-                } else {
-                    VStack(spacing: 8) {
-                        Image(systemName: "photo")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-
-                        Text("画像なし")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("画像なし")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
-            .frame(height: 180)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 }
@@ -376,5 +340,36 @@ private struct ProfileChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(Color.blue.opacity(0.10), in: Capsule())
+    }
+}
+
+private struct ProfileInfoBadge: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.blue)
+                .frame(width: 24, height: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(value)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
