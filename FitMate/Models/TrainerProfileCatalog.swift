@@ -104,11 +104,29 @@ enum TrainerProfileCatalog {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
 
-        guard let entries = try? decoder.decode([TrainerProfileCatalogEntry].self, from: data) else {
+        if let entries = try? decoder.decode([TrainerProfileCatalogEntry].self, from: data) {
+            return Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0.profile) })
+        }
+
+        guard let rawEntries = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else {
             return [:]
         }
 
-        return Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0.profile) })
+        var catalog: [String: TrainerProfile?] = [:]
+
+        for rawEntry in rawEntries {
+            guard let id = rawEntry["id"] as? String else { continue }
+
+            guard let entryData = try? JSONSerialization.data(withJSONObject: rawEntry),
+                  let entry = try? decoder.decode(TrainerProfileCatalogEntry.self, from: entryData) else {
+                catalog[id] = nil
+                continue
+            }
+
+            catalog[entry.id] = entry.profile
+        }
+
+        return catalog
     }
 }
 

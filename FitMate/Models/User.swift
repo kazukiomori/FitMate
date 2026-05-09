@@ -6,6 +6,30 @@
 import SwiftUI
 import UIKit
 
+enum MBTIType: String, CaseIterable {
+    case undecided = "未選択"
+    case intj = "INTJ"
+    case intp = "INTP"
+    case entj = "ENTJ"
+    case entp = "ENTP"
+    case infj = "INFJ"
+    case infp = "INFP"
+    case enfj = "ENFJ"
+    case enfp = "ENFP"
+    case istj = "ISTJ"
+    case isfj = "ISFJ"
+    case estj = "ESTJ"
+    case esfj = "ESFJ"
+    case istp = "ISTP"
+    case isfp = "ISFP"
+    case estp = "ESTP"
+    case esfp = "ESFP"
+
+    static var selectableCases: [MBTIType] {
+        allCases.filter { $0 != .undecided }
+    }
+}
+
 enum IntimacyStatus: Int {
     case firstMeeting = 1
     case acquaintance
@@ -86,6 +110,7 @@ class User: ObservableObject {
     @Published var height: Double = 170.0
     @Published var gender: Gender = .female
     @Published var activityLevel: ActivityLevel = .moderate
+    @Published var mbti: MBTIType = .undecided
     @Published var targetDate: Date = Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
     @Published var isOnboardingComplete: Bool = false
     @Published var isPremiumUser: Bool = false {
