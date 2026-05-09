@@ -537,7 +537,6 @@ private struct TrainerConversationSection: View {
                     ForEach(messages) { message in
                         HomeChatBubbleRow(
                             message: message,
-                            trainerName: trainerDisplayName,
                             trainerImage: trainerSmileImage,
                             onTrainerTap: {
                                 showingTrainerProfile = true
@@ -548,7 +547,6 @@ private struct TrainerConversationSection: View {
 
                     if coachMessageViewModel.isLoading {
                         HomeTypingIndicatorRow(
-                            trainerName: trainerDisplayName,
                             trainerImage: trainerSmileImage,
                             onTrainerTap: {
                                 showingTrainerProfile = true
@@ -722,7 +720,6 @@ private struct HomeChatMessage: Identifiable {
 
 private struct HomeChatBubbleRow: View {
     let message: HomeChatMessage
-    let trainerName: String
     let trainerImage: UIImage?
     let onTrainerTap: () -> Void
 
@@ -731,13 +728,7 @@ private struct HomeChatBubbleRow: View {
             if message.sender == .trainer {
                 trainerAvatar
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(trainerName)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-
-                    trainerBubble
-                }
+                trainerBubble
 
                 Spacer(minLength: 40)
             } else {
@@ -803,7 +794,6 @@ private struct HomeChatBubbleRow: View {
 }
 
 private struct HomeTypingIndicatorRow: View {
-    let trainerName: String
     let trainerImage: UIImage?
     let onTrainerTap: () -> Void
 
@@ -824,29 +814,23 @@ private struct HomeTypingIndicatorRow: View {
             }
             .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(trainerName)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                HStack(spacing: 6) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        Circle()
-                            .fill(Color.gray.opacity(0.55))
-                            .frame(width: 6, height: 6)
-                    }
+            HStack(spacing: 6) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Circle()
+                        .fill(Color.gray.opacity(0.55))
+                        .frame(width: 6, height: 6)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
-                )
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
 
             Spacer(minLength: 40)
         }
