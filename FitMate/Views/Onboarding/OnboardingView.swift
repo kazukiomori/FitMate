@@ -18,7 +18,7 @@ struct OnboardingView: View {
     }
 
     private let stepTitles = [
-        "ようこそ",
+        "MBTI",
         "あなたのこと",
         "目標（ゆるめでOK）",
         "トレーナー",
@@ -58,7 +58,7 @@ struct OnboardingView: View {
                 
                 // コンテンツ
                 TabView(selection: $currentStep) {
-                    WelcomeStepView()
+                    MBTISelectionStepView()
                         .tag(0)
                     ProfileSetupView()
                         .tag(1)

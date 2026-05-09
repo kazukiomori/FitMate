@@ -138,6 +138,36 @@ struct ProfileSetupView: View {
                             }
                         }
                     }
+
+                    ModernSettingCard(
+                        icon: "person.text.rectangle",
+                        title: "MBTI",
+                        value: user.mbti.rawValue
+                    ) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("わかる範囲で大丈夫です")
+                                .font(.caption)
+                                .foregroundColor(AoiOnboardingTheme.textSecondary)
+
+                            FlexibleTagLayout(spacing: 10, runSpacing: 10) {
+                                SelectableChip(
+                                    title: MBTIType.undecided.rawValue,
+                                    isSelected: user.mbti == .undecided
+                                ) {
+                                    user.mbti = .undecided
+                                }
+
+                                ForEach(MBTIType.selectableCases, id: \.self) { type in
+                                    SelectableChip(
+                                        title: type.rawValue,
+                                        isSelected: user.mbti == type
+                                    ) {
+                                        user.mbti = type
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 .opacity(animateCard ? 1 : 0)
                 .offset(y: animateCard ? 0 : 50)

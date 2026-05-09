@@ -197,7 +197,7 @@ struct TrainerSetupView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
                     TrainerSelectionIdentityBlock(
-                        name: trainer.selectionDisplayName,
+                        name: trainer.selectionDisplayName, reading: trainer.selectionReading,
                         ageText: trainer.selectionAgeText,
                         genderText: trainer.selectionGenderText
                     )
@@ -570,6 +570,7 @@ private struct TrainerSwipeCard: View {
 
             TrainerSelectionIdentityBlock(
                 name: candidate.displayName,
+                reading: candidate.displayReading,
                 ageText: candidate.displayAgeText,
                 genderText: candidate.displayGenderText
             )
@@ -742,6 +743,7 @@ private struct TrainerDedicatedCard: View {
 
             TrainerSelectionIdentityBlock(
                 name: trainer.selectionDisplayName,
+                reading: trainer.selectionReading,
                 ageText: trainer.selectionAgeText,
                 genderText: trainer.selectionGenderText,
                 alignment: .center
@@ -779,19 +781,32 @@ private struct TrainerDedicatedCard: View {
 
 private struct TrainerSelectionIdentityBlock: View {
     let name: String
-    let ageText: String
+    let reading: String?
+    let ageText: String?
     let genderText: String
     var alignment: HorizontalAlignment = .leading
 
     var body: some View {
         VStack(alignment: alignment, spacing: 10) {
-            Text(name)
-                .font(.title3.weight(.bold))
-                .foregroundColor(AoiOnboardingTheme.textPrimary)
-                .multilineTextAlignment(alignment == .center ? .center : .leading)
+            VStack(alignment: alignment, spacing: 4) {
+                Text(name)
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(AoiOnboardingTheme.textPrimary)
+                    .multilineTextAlignment(alignment == .center ? .center : .leading)
+
+                if let reading, !reading.isEmpty {
+                    Text(reading)
+                        .font(.subheadline)
+                        .foregroundColor(AoiOnboardingTheme.textSecondary)
+                        .multilineTextAlignment(alignment == .center ? .center : .leading)
+                }
+            }
 
             HStack(spacing: 8) {
-                TrainerInfoChip(icon: "calendar", text: ageText)
+                if let ageText, !ageText.isEmpty {
+                    TrainerInfoChip(icon: "calendar", text: ageText)
+                }
+
                 TrainerInfoChip(icon: "person.fill", text: genderText)
             }
             .frame(maxWidth: .infinity, alignment: alignment == .center ? .center : .leading)
@@ -828,21 +843,33 @@ private extension TrainerCandidate {
         return TrainerProfileCatalog.profile(for: assetNamespace)
     }
 
-    var displayName: String {
-        if !name.isEmpty {
-            return name
+    var displayReading: String? {
+        guard let reading = profile?.name.reading, !reading.isEmpty else {
+            return nil
         }
 
+        return reading
+    }
+
+    var displayName: String {
         if let fullName = profile?.name.full, !fullName.isEmpty {
             return fullName
         }
 
-        return defaultTrainerDisplayName(assetNamespace: assetNamespace)
+        if !name.isEmpty {
+            return name
+        }
+
+        return "トレーナー"
     }
 
-    var displayAgeText: String {
+    var displayAgeText: String? {
         if let age = profile?.age {
             return "\(age)歳"
+        }
+
+        if assetNamespace != nil {
+            return nil
         }
 
         return preferences.age.rawValue
@@ -854,21 +881,33 @@ private extension TrainerCandidate {
 }
 
 private extension PersonalTrainer {
-    var selectionDisplayName: String {
-        if !name.isEmpty {
-            return name
+    var selectionReading: String? {
+        guard let reading = profile?.name.reading, !reading.isEmpty else {
+            return nil
         }
 
+        return reading
+    }
+
+    var selectionDisplayName: String {
         if let fullName = profile?.name.full, !fullName.isEmpty {
             return fullName
         }
 
-        return defaultTrainerDisplayName(assetNamespace: assetNamespace)
+        if !name.isEmpty {
+            return name
+        }
+
+        return "トレーナー"
     }
 
-    var selectionAgeText: String {
+    var selectionAgeText: String? {
         if let age = profile?.age {
             return "\(age)歳"
+        }
+
+        if assetNamespace != nil {
+            return nil
         }
 
         return preferences.age.rawValue
@@ -878,14 +917,4 @@ private extension PersonalTrainer {
         preferences.gender.rawValue
     }
 }
-
-private func defaultTrainerDisplayName(assetNamespace: String?) -> String {
-    guard let assetNamespace, assetNamespace.hasPrefix("trainer") else {
-        return "トレーナー"
-    }
-
-    let suffix = assetNamespace.replacingOccurrences(of: "trainer", with: "")
-    return suffix.isEmpty ? "トレーナー" : "トレーナー\(suffix)"
-}
-
 

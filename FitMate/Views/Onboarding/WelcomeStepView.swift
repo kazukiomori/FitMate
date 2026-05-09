@@ -5,61 +5,134 @@
 
 import SwiftUI
 
-struct WelcomeStepView: View {
-    @State private var animateIcon = false
-    @State private var animateText = false
-    
+struct MBTISelectionStepView: View {
+    @EnvironmentObject var user: User
+    @State private var animateCard = false
+
     var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
-            
-            // アニメーションアイコン
-            ZStack {
-                Circle()
-                    .fill(AoiOnboardingTheme.accentSoft)
-                    .frame(width: 160, height: 160)
-                    .overlay(
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 24) {
+                VStack(spacing: 20) {
+                    ZStack {
                         Circle()
-                            .stroke(AoiOnboardingTheme.border, lineWidth: 2)
+                            .fill(AoiOnboardingTheme.accentSoft)
+                            .frame(width: 132, height: 132)
+                            .overlay(
+                                Circle()
+                                    .stroke(AoiOnboardingTheme.border, lineWidth: 2)
+                            )
+
+                        Image(systemName: "person.text.rectangle.fill")
+                            .font(.system(size: 48, weight: .medium))
+                            .foregroundColor(AoiOnboardingTheme.accent)
+                    }
+
+                    OnboardingHeader(
+                        title: "あなたのMBTIを教えてください",
+                        subtitle: "わかる範囲で大丈夫です。\nあとからプロフィールで変更できます。",
+                        footnote: "未選択のまま進んでもOK"
                     )
-                    .scaleEffect(animateIcon ? 1.1 : 1.0)
-                    .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: animateIcon)
-                
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 60, weight: .medium))
-                    .foregroundColor(AoiOnboardingTheme.accent)
-            }
-            
-            VStack(spacing: 20) {
-                Text("FitMate")
-                    .font(.system(size: 42, weight: .bold, design: .rounded))
-                    .foregroundColor(AoiOnboardingTheme.textPrimary)
-                    .opacity(animateText ? 1 : 0)
-                    .offset(y: animateText ? 0 : 20)
 
-                OnboardingHeader(
-                    title: "続けることを、いちばん大事に。",
-                    subtitle: "毎日じゃなくてOK。\nできた日だけ記録して、\n“続いた”を増やしていこう。",
-                    footnote: "あとでいつでも変えられます"
+                    OnboardingHintPill(text: "迷ったら未選択でも大丈夫")
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "sparkles")
+                            .font(.title3)
+                            .foregroundColor(AoiOnboardingTheme.accent)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("現在の選択")
+                                .font(.caption)
+                                .foregroundColor(AoiOnboardingTheme.textSecondary)
+
+                            Text(user.mbti.rawValue)
+                                .font(.title3.weight(.bold))
+                                .foregroundColor(AoiOnboardingTheme.textPrimary)
+                        }
+                    }
+
+                    FlexibleTagLayout(spacing: 10, runSpacing: 10) {
+                        SelectableChip(
+                            title: MBTIType.undecided.rawValue,
+                            isSelected: user.mbti == .undecided
+                        ) {
+                            user.mbti = .undecided
+                        }
+
+                        ForEach(MBTIType.selectableCases, id: \.self) { type in
+                            SelectableChip(
+                                title: type.rawValue,
+                                isSelected: user.mbti == type
+                            ) {
+                                user.mbti = type
+                            }
+                        }
+                    }
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(AoiOnboardingTheme.cardBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(AoiOnboardingTheme.border, lineWidth: 1)
+                        )
                 )
-                .opacity(animateText ? 1 : 0)
-                .offset(y: animateText ? 0 : 20)
-                .animation(.easeOut(duration: 0.8).delay(0.25), value: animateText)
+                .shadow(color: AoiOnboardingTheme.shadow, radius: 14, x: 0, y: 7)
+                .opacity(animateCard ? 1 : 0)
+                .offset(y: animateCard ? 0 : 24)
+                .animation(.easeOut(duration: 0.8).delay(0.15), value: animateCard)
 
-                OnboardingHintPill(text: "まずは3日続いたら、もう勝ち")
-                    .opacity(animateText ? 1 : 0)
-                    .offset(y: animateText ? 0 : 18)
-                    .animation(.easeOut(duration: 0.8).delay(0.45), value: animateText)
+                VStack(spacing: 12) {
+                    MBTIInfoRow(
+                        icon: "lightbulb",
+                        title: "ざっくりでOK",
+                        detail: "正確じゃなくても大丈夫。今の自分に近いものを選べます。"
+                    )
+
+                    MBTIInfoRow(
+                        icon: "arrow.triangle.2.circlepath",
+                        title: "あとで変更可能",
+                        detail: "プロフィール設定からいつでも見直せます。"
+                    )
+                }
+
+                Spacer(minLength: 80)
             }
-            
-            Spacer()
+            .onboardingPagePadding()
         }
-        .onboardingPagePadding()
         .onAppear {
-            withAnimation(.easeOut(duration: 0.8)) {
-                animateText = true
+            animateCard = true
+        }
+    }
+}
+
+private struct MBTIInfoRow: View {
+    let icon: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundColor(AoiOnboardingTheme.accent)
+                .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AoiOnboardingTheme.textPrimary)
+
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundColor(AoiOnboardingTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            animateIcon = true
+
+            Spacer(minLength: 0)
         }
     }
 }
