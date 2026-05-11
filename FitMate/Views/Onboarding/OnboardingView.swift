@@ -58,7 +58,11 @@ struct OnboardingView: View {
                 
                 // コンテンツ
                 TabView(selection: $currentStep) {
-                    MBTISelectionStepView()
+                    MBTISelectionStepView(
+                        onContinue: {
+                            advanceToNextStep()
+                        }
+                    )
                         .tag(0)
                     ProfileSetupView()
                         .tag(1)
@@ -78,29 +82,36 @@ struct OnboardingView: View {
                 }
                 
                 // ナビゲーションボタン
-                HStack(spacing: 20) {
-                    if currentStep > 0 {
-                        Button(backButtonTitle) {
-                            handleBack()
+                if currentStep != 0 {
+                    HStack(spacing: 20) {
+                        if currentStep > 0 {
+                            Button(backButtonTitle) {
+                                handleBack()
+                            }
+                            .buttonStyle(AoiSecondaryButtonStyle())
+                            .frame(maxWidth: .infinity)
+                        } else {
+                            Color.clear
+                                .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                         }
-                        .buttonStyle(AoiSecondaryButtonStyle())
+
+                        Button(nextButtonTitle) {
+                            handleNext()
+                        }
+                        .buttonStyle(AoiPrimaryButtonStyle())
                         .frame(maxWidth: .infinity)
-                    } else {
-                        // Invisible dummy to keep button widths equal
-                        Color.clear
-                            .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                     }
-                    
-                    Button(nextButtonTitle) {
-                        handleNext()
-                    }
-                    .buttonStyle(AoiPrimaryButtonStyle())
-                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .padding(.horizontal, 30)
+                    .padding(.bottom, 40)
                 }
-                .frame(height: 56) // ボタン高さを揃える
-                .padding(.horizontal, 30)
-                .padding(.bottom, 40)
             }
+        }
+    }
+
+    private func advanceToNextStep() {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            currentStep += 1
         }
     }
 
