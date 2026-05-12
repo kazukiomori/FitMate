@@ -10,8 +10,7 @@ struct OnboardingView: View {
     @AppStorage("isOnboardingComplete") private var isOnboardingComplete: Bool = false
     @State private var currentStep = 0
     @State private var offset: CGFloat = 0
-    @State private var pendingTrainer: PersonalTrainer? = nil
-    private let totalSteps = 5
+    private let totalSteps = 4
 
     private var remainingSteps: Int {
         max(totalSteps - (currentStep + 1), 0)
@@ -21,7 +20,6 @@ struct OnboardingView: View {
         "MBTI",
         "あなたのこと",
         "目標（ゆるめでOK）",
-        "トレーナー",
         "できること"
     ]
     
@@ -68,18 +66,11 @@ struct OnboardingView: View {
                         .tag(1)
                     GoalSettingView(showsBackground: false)
                         .tag(2)
-                    TrainerSetupView(pendingTrainer: $pendingTrainer)
-                        .tag(3)
                     FeatureIntroView()
-                        .tag(4)
+                        .tag(3)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.5), value: currentStep)
-                .onChange(of: currentStep) { newStep in
-                    if newStep != 3 {
-                        pendingTrainer = nil
-                    }
-                }
                 
                 // ナビゲーションボタン
                 if currentStep != 0 {
@@ -115,45 +106,21 @@ struct OnboardingView: View {
         }
     }
 
-    private var isTrainerPendingConfirmation: Bool {
-        currentStep == 3 && pendingTrainer != nil
-    }
-
     private var backButtonTitle: String {
-        isTrainerPendingConfirmation ? "別の候補へ" : "戻る"
+        "戻る"
     }
 
     private var nextButtonTitle: String {
-        if isTrainerPendingConfirmation {
-            return "決定"
-        }
         return currentStep == totalSteps - 1 ? "始める" : "次へ"
     }
 
     private func handleBack() {
-        if isTrainerPendingConfirmation {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                pendingTrainer = nil
-            }
-            return
-        }
-
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             currentStep -= 1
         }
     }
 
     private func handleNext() {
-        if isTrainerPendingConfirmation {
-            guard let trainer = pendingTrainer else { return }
-            user.setPersonalTrainer(trainer)
-            pendingTrainer = nil
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                currentStep += 1
-            }
-            return
-        }
-
         if currentStep == totalSteps - 1 {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
                 isOnboardingComplete = true
