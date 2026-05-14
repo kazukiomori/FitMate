@@ -412,7 +412,7 @@ private extension MBTIType {
         case .enfj:
             return MBTIPresentation(title: "主人公", badge: "外交官タイプ", tagline: "人を導く包容力", strengths: ["共感力が高い", "前向きに励ませる", "愛情深い"], compatibleType: "INFP", compatibilityMessage: "やさしさを返してくれる", tint: Color(red: 0.31, green: 0.69, blue: 0.48), trainerAssetNamespace: "trainer1")
         case .entj:
-            return MBTIPresentation(title: "指揮官", badge: "分析家タイプ", tagline: "意志の強さで道を拓く", strengths: ["戦略的", "頼もしさがある", "目標志向"], compatibleType: "INTP", compatibilityMessage: "思考を刺激し合える", tint: Color(red: 0.45, green: 0.36, blue: 0.70), trainerAssetNamespace: nil)
+            return MBTIPresentation(title: "指揮官", badge: "分析家タイプ", tagline: "意志の強さで道を拓く", strengths: ["戦略的", "頼もしさがある", "目標志向"], compatibleType: "INTP", compatibilityMessage: "思考を刺激し合える", tint: Color(red: 0.45, green: 0.36, blue: 0.70), trainerAssetNamespace: "trainer9")
         case .undecided:
             return .init(title: "未選択", badge: "スキップOK", tagline: "あとでゆっくり選べます", strengths: ["直感で選んでOK"], compatibleType: "--", compatibilityMessage: "あとから変更できます", tint: AoiOnboardingTheme.accent, trainerAssetNamespace: nil)
         }
