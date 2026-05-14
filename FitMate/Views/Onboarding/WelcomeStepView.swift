@@ -404,7 +404,7 @@ private extension MBTIType {
         case .enfp:
             return MBTIPresentation(title: "運動家", badge: "外交官タイプ", tagline: "前向きなエネルギーで惹きつける", strengths: ["発想が豊か", "人を元気づける", "自由で前向き"], compatibleType: "INFJ", compatibilityMessage: "心の深さで支えてくれる", tint: Color(red: 0.29, green: 0.73, blue: 0.40), trainerAssetNamespace: "trainer4")
         case .entp:
-            return MBTIPresentation(title: "討論者", badge: "分析家タイプ", tagline: "ひらめきで世界を広げる", strengths: ["会話が軽やか", "好奇心が強い", "変化を楽しめる"], compatibleType: "INFJ", compatibilityMessage: "深さのある理解者", tint: Color(red: 0.51, green: 0.43, blue: 0.78), trainerAssetNamespace: nil)
+            return MBTIPresentation(title: "討論者", badge: "分析家タイプ", tagline: "ひらめきで世界を広げる", strengths: ["会話が軽やか", "好奇心が強い", "変化を楽しめる"], compatibleType: "INFJ", compatibilityMessage: "深さのある理解者", tint: Color(red: 0.51, green: 0.43, blue: 0.78), trainerAssetNamespace: "trainer10")
         case .estj:
             return MBTIPresentation(title: "幹部", badge: "番人タイプ", tagline: "まっすぐ導くリーダー気質", strengths: ["行動力がある", "決断が早い", "責任感が強い"], compatibleType: "ISFP", compatibilityMessage: "やわらかさで支えてくれる", tint: Color(red: 0.28, green: 0.48, blue: 0.78), trainerAssetNamespace: nil)
         case .esfj:
