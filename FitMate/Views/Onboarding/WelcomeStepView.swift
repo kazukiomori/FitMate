@@ -382,7 +382,7 @@ private extension MBTIType {
     var presentation: MBTIPresentation {
         switch self {
         case .istj:
-            return MBTIPresentation(title: "管理者", badge: "番人タイプ", tagline: "静かに整えてくれる安定感", strengths: ["誠実で堅実", "責任感が強い", "現実的で頼れる"], compatibleType: "ENFP", compatibilityMessage: "違う視点をくれる相手", tint: Color(red: 0.30, green: 0.48, blue: 0.74), trainerAssetNamespace: nil)
+            return MBTIPresentation(title: "管理者", badge: "番人タイプ", tagline: "静かに整えてくれる安定感", strengths: ["誠実で堅実", "責任感が強い", "現実的で頼れる"], compatibleType: "ENFP", compatibilityMessage: "違う視点をくれる相手", tint: Color(red: 0.30, green: 0.48, blue: 0.74), trainerAssetNamespace: "trainer12")
         case .isfj:
             return MBTIPresentation(title: "擁護者", badge: "番人タイプ", tagline: "やさしく寄り添う安心感", strengths: ["気配りが細かい", "思いやりが深い", "穏やかで丁寧"], compatibleType: "ENTP", compatibilityMessage: "新しい世界を見せてくれる", tint: Color(red: 0.26, green: 0.70, blue: 0.78), trainerAssetNamespace: "trainer2")
         case .infj:
