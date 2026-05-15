@@ -390,7 +390,7 @@ private extension MBTIType {
         case .intj:
             return MBTIPresentation(title: "建築家", badge: "分析家タイプ", tagline: "冷静に未来を描く", strengths: ["論理的", "自立心が強い", "戦略的に考える"], compatibleType: "ENFP", compatibilityMessage: "感性を広げてくれる相手", tint: Color(red: 0.48, green: 0.40, blue: 0.77), trainerAssetNamespace: "trainer7")
         case .istp:
-            return MBTIPresentation(title: "巨匠", badge: "探検家タイプ", tagline: "自然体で頼れる職人肌", strengths: ["柔軟で実践的", "観察力が高い", "冷静に対処できる"], compatibleType: "ESFJ", compatibilityMessage: "日常に温度をくれる相手", tint: Color(red: 0.84, green: 0.60, blue: 0.20), trainerAssetNamespace: nil)
+            return MBTIPresentation(title: "巨匠", badge: "探検家タイプ", tagline: "自然体で頼れる職人肌", strengths: ["柔軟で実践的", "観察力が高い", "冷静に対処できる"], compatibleType: "ESFJ", compatibilityMessage: "日常に温度をくれる相手", tint: Color(red: 0.84, green: 0.60, blue: 0.20), trainerAssetNamespace: "trainer14")
         case .isfp:
             return MBTIPresentation(title: "冒険家", badge: "探検家タイプ", tagline: "やさしさで彩るマイペース", strengths: ["感受性が豊か", "自然体でやさしい", "美意識が高い"], compatibleType: "ENFJ", compatibilityMessage: "気持ちを汲み取ってくれる", tint: Color(red: 0.90, green: 0.67, blue: 0.33), trainerAssetNamespace: nil)
         case .infp:
