@@ -406,7 +406,7 @@ private extension MBTIType {
         case .entp:
             return MBTIPresentation(title: "討論者", badge: "分析家タイプ", tagline: "ひらめきで世界を広げる", strengths: ["会話が軽やか", "好奇心が強い", "変化を楽しめる"], compatibleType: "INFJ", compatibilityMessage: "深さのある理解者", tint: Color(red: 0.51, green: 0.43, blue: 0.78), trainerAssetNamespace: "trainer10")
         case .estj:
-            return MBTIPresentation(title: "幹部", badge: "番人タイプ", tagline: "まっすぐ導くリーダー気質", strengths: ["行動力がある", "決断が早い", "責任感が強い"], compatibleType: "ISFP", compatibilityMessage: "やわらかさで支えてくれる", tint: Color(red: 0.28, green: 0.48, blue: 0.78), trainerAssetNamespace: nil)
+            return MBTIPresentation(title: "幹部", badge: "番人タイプ", tagline: "まっすぐ導くリーダー気質", strengths: ["行動力がある", "決断が早い", "責任感が強い"], compatibleType: "ISFP", compatibilityMessage: "やわらかさで支えてくれる", tint: Color(red: 0.28, green: 0.48, blue: 0.78), trainerAssetNamespace: "trainer13")
         case .esfj:
             return MBTIPresentation(title: "領事", badge: "番人タイプ", tagline: "人のために動けるあたたかさ", strengths: ["面倒見が良い", "空気が読める", "親しみやすい"], compatibleType: "ISTP", compatibilityMessage: "自然体でいられる相手", tint: Color(red: 0.27, green: 0.63, blue: 0.82), trainerAssetNamespace: "trainer3")
         case .enfj:
