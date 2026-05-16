@@ -274,10 +274,15 @@ private struct MBTICarouselCard: View {
                 endPoint: .bottom
             )
             VStack(alignment: .leading, spacing: 6) {
-                Text(type.rawValue)
-                    .font(.system(size: 44, weight: .heavy, design: .serif))
-                    .foregroundColor(.white)
-
+                HStack(alignment: .center, spacing: 6) {
+                    Text(type.rawValue)
+                        .font(.system(size: 30, weight: .heavy, design: .serif))
+                        .foregroundColor(.white)
+                    Text(theme.title)
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineSpacing(4)
+                }
                 Text(theme.tagline)
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
