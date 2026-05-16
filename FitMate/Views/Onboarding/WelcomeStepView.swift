@@ -10,13 +10,14 @@ struct MBTISelectionStepView: View {
     @EnvironmentObject var user: User
     let onContinue: () -> Void
 
-    @State private var carouselSelection: MBTIType? = .esfp
-    @State private var selectedFilter: MBTIFilter = .explorers
+    @State private var carouselSelection: MBTIType? = .intj
+    @State private var selectedFilter: MBTIFilter = .analysts
 
     private let displayFilters: [MBTIFilter] = [.analysts, .diplomats, .sentinels, .explorers]
+    private let defaultMBTIType: MBTIType = .intj
 
     private var selectedType: MBTIType {
-        carouselSelection ?? .esfp
+        carouselSelection ?? defaultMBTIType
     }
 
     private var activeFilter: MBTIFilter {
@@ -34,11 +35,13 @@ struct MBTISelectionStepView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 18) {
+                VStack(spacing: 10) {
                     headerSection
-                    heroSection
-                    filterTabsSection
-                    pageIndicatorSection
+                    VStack(spacing: 5) {
+                        filterTabsSection
+                        heroSection
+                        pageIndicatorSection
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -62,7 +65,7 @@ struct MBTISelectionStepView: View {
                 )
         }
         .onAppear {
-            let initialType = user.mbti == .undecided ? MBTIType.esfp : user.mbti
+            let initialType = user.mbti == .undecided ? defaultMBTIType : user.mbti
             carouselSelection = initialType
             user.mbti = initialType
             selectedFilter = initialType.group
@@ -123,22 +126,17 @@ struct MBTISelectionStepView: View {
                 } label: {
                     Text(filter.title)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(isActive ? filter.tint : .white)
+                        .foregroundColor(isActive ? .white : filter.tint)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(
-                            ZStack {
-                                if isActive {
-                                    Color.white
-                                } else {
-                                    filter.tint
-                                }
-                            }
+                            isActive ? filter.tint : filter.tint.opacity(0.18)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 0)
-                                .stroke(isActive ? filter.tint : Color.clear, lineWidth: 2)
+                                .stroke(isActive ? filter.tint.opacity(0.95) : Color.clear, lineWidth: 2)
                         )
+                        .shadow(color: isActive ? filter.tint.opacity(0.18) : .clear, radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(.plain)
             }
