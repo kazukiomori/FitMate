@@ -254,38 +254,24 @@ private struct MBTICarouselCard: View {
                 imageName: "first",
                 contentMode: .fill
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                LinearGradient(
-                    colors: [
-                        theme.tint.opacity(0.34),
-                        theme.tint.opacity(0.18),
-                        theme.tint.opacity(0.06)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+            .frame(width: UIScreen.main.bounds.width * 0.74, height: min(cardHeight, 520))
+            .clipped()
 
             LinearGradient(
                 colors: [
                     Color.clear,
                     Color.black.opacity(0.18),
-                    Color.black.opacity(0.78),
-                    Color.clear
+                    Color.black.opacity(0.78)
                 ],
                 startPoint: .center,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
-
             VStack(alignment: .leading, spacing: 6) {
                 Text(type.rawValue)
                     .font(.system(size: 44, weight: .heavy, design: .serif))
                     .foregroundColor(.white)
 
-                Text(type.presentation.tagline)
+                Text(theme.tagline)
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .lineSpacing(4)
@@ -293,9 +279,9 @@ private struct MBTICarouselCard: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 26)
         }
-        .frame(height: min(cardHeight, 520))
+        .frame(width: UIScreen.main.bounds.width * 0.74, height: min(cardHeight, 520))
+        .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
-        .background(Color.white, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                 .stroke(Color.white.opacity(0.9), lineWidth: 1)
