@@ -10,42 +10,44 @@ struct MBTISelectionStepView: View {
     @EnvironmentObject var user: User
     let onContinue: () -> Void
 
-    @State private var animateHero = false
-    @State private var selectedFilter: MBTIFilter = .all
+    @State private var carouselSelection: MBTIType? = .esfp
+    @State private var selectedFilter: MBTIFilter = .explorers
 
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 4)
+    private let displayFilters: [MBTIFilter] = [.analysts, .diplomats, .sentinels, .explorers]
 
     private var selectedType: MBTIType {
-        user.mbti == .undecided ? .esfp : user.mbti
+        carouselSelection ?? .esfp
     }
 
-    private var filteredTypes: [MBTIType] {
-        switch selectedFilter {
-        case .all:
-            return MBTIType.selectableCases
-        default:
-            return MBTIType.selectableCases.filter { $0.group == selectedFilter }
-        }
+    private var activeFilter: MBTIFilter {
+        selectedFilter
+    }
+
+    private var carouselTypes: [MBTIType] {
+        MBTIType.selectableCases
+    }
+
+    private var selectedIndex: Int {
+        carouselTypes.firstIndex(of: selectedType) ?? 0
     }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
+                VStack(spacing: 18) {
                     headerSection
                     heroSection
                     filterTabsSection
-                    gridSection
-                    helperNote
+                    pageIndicatorSection
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
             }
 
             bottomActionSection
                 .padding(.horizontal, 20)
-                .padding(.top, 12)
+                .padding(.top, 16)
                 .padding(.bottom, 28)
                 .background(
                     LinearGradient(
@@ -60,7 +62,15 @@ struct MBTISelectionStepView: View {
                 )
         }
         .onAppear {
-            animateHero = true
+            let initialType = user.mbti == .undecided ? MBTIType.esfp : user.mbti
+            carouselSelection = initialType
+            user.mbti = initialType
+            selectedFilter = initialType.group
+        }
+        .onChange(of: carouselSelection) { newValue in
+            guard let newValue else { return }
+            user.mbti = newValue
+            selectedFilter = newValue.group
         }
     }
 
@@ -79,144 +89,73 @@ struct MBTISelectionStepView: View {
     }
 
     private var heroSection: some View {
-        let theme = selectedType.presentation
-
-        return ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            theme.tint.opacity(0.22),
-                            Color.white.opacity(0.9),
-                            theme.tint.opacity(0.10)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.8), lineWidth: 1)
-                )
-
-            Circle()
-                .fill(theme.tint.opacity(0.18))
-                .frame(width: 240, height: 240)
-                .blur(radius: 20)
-                .offset(x: 68, y: 8)
-
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(selectedType.rawValue)
-                            .font(.system(size: 36, weight: .heavy, design: .serif))
-                            .foregroundColor(theme.tint)
-
-                        Text(theme.title)
-                            .font(.title3.weight(.bold))
-                            .foregroundColor(theme.tint)
-
-                        Text(theme.badge)
-                            .font(.caption.weight(.bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(theme.tint, in: Capsule())
-                    }
-
-                    Text(theme.tagline)
-                        .font(.headline)
-                        .foregroundColor(theme.tint)
-                        .lineSpacing(4)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(theme.strengths, id: \.self) { trait in
-                            Label(trait, systemImage: "heart.fill")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundColor(AoiOnboardingTheme.textPrimary)
-                                .labelStyle(.titleAndIcon)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .background(Color.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 36) {
+                ForEach(carouselTypes, id: \.self) { type in
+                    MBTICarouselCard(type: type)
+                        .frame(width: UIScreen.main.bounds.width * 0.74)
+                        .id(type)
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(.leading, 20)
-                .padding(.top, 22)
-                .padding(.bottom, 22)
-
-                MBTITrainerImageView(
-                    assetNamespace: theme.trainerAssetNamespace,
-                    imageName: "first",
-                    contentMode: .fit
-                )
-                .frame(width: 180, height: 288)
-                .scaleEffect(animateHero ? 1 : 0.96)
-                .opacity(animateHero ? 1 : 0)
-                .animation(.easeOut(duration: 0.7), value: animateHero)
-                .padding(.top, 18)
-                .padding(.trailing, 10)
             }
+            .padding(.horizontal, 36)
+            .scrollTargetLayout()
         }
-        .frame(minHeight: 400)
-        .shadow(color: AoiOnboardingTheme.shadow, radius: 20, x: 0, y: 10)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: $carouselSelection)
+        .frame(height: 560)
     }
 
     private var filterTabsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("すべてのタイプから選ぶ")
-                .font(.headline)
-                .foregroundColor(AoiOnboardingTheme.textPrimary)
+        HStack(spacing: 0) {
+            ForEach(displayFilters, id: \.self) { filter in
+                let isActive = selectedFilter == filter
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(MBTIFilter.allCases, id: \.self) { filter in
-                        Button {
-                            selectedFilter = filter
-                        } label: {
-                            Text(filter.title)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(selectedFilter == filter ? .white : AoiOnboardingTheme.textSecondary)
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Capsule()
-                                        .fill(selectedFilter == filter ? AoiOnboardingTheme.accent : Color.white)
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(AoiOnboardingTheme.border, lineWidth: selectedFilter == filter ? 0 : 1)
-                                )
-                        }
-                        .buttonStyle(.plain)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        selectedFilter = filter
+                        jumpToGroup(filter)
                     }
+                } label: {
+                    Text(filter.title)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(isActive ? filter.tint : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            ZStack {
+                                if isActive {
+                                    Color.white
+                                } else {
+                                    filter.tint
+                                }
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 0)
+                                .stroke(isActive ? filter.tint : Color.clear, lineWidth: 2)
+                        )
                 }
-                .padding(.horizontal, 4)
+                .buttonStyle(.plain)
             }
         }
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(Color.white.opacity(0.92), lineWidth: 1)
+        )
+        .shadow(color: AoiOnboardingTheme.shadow, radius: 10, x: 0, y: 5)
     }
 
-    private var gridSection: some View {
-        LazyVGrid(columns: gridColumns, spacing: 12) {
-            ForEach(filteredTypes, id: \.self) { type in
-                MBTIGridCard(
-                    type: type,
-                    isSelected: user.mbti == type
-                ) {
-                    user.mbti = type
-                }
+    private var pageIndicatorSection: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(carouselTypes.enumerated()), id: \.offset) { index, type in
+                Circle()
+                    .fill(index == selectedIndex ? Color.black.opacity(0.42) : Color.black.opacity(0.14))
+                    .frame(width: index == selectedIndex ? 10 : 8, height: index == selectedIndex ? 10 : 8)
+                    .scaleEffect(index == selectedIndex ? 1 : 0.92)
+                    .animation(.easeInOut(duration: 0.18), value: selectedIndex)
             }
         }
-    }
-
-    private var helperNote: some View {
-        Text("※あとからプロフィール画面でいつでも変更できます")
-            .font(.footnote)
-            .foregroundColor(AoiOnboardingTheme.textSecondary)
-            .multilineTextAlignment(.center)
-            .padding(.top, 8)
     }
 
     private var bottomActionSection: some View {
@@ -230,21 +169,28 @@ struct MBTISelectionStepView: View {
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
+                .frame(height: 56)
                 .background(
                     LinearGradient(
                         colors: [
-                            AoiOnboardingTheme.accent,
-                            Color(red: 0.97, green: 0.48, blue: 0.66)
+                            Color(red: 0.57, green: 0.39, blue: 0.88),
+                            Color(red: 0.45, green: 0.31, blue: 0.83)
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
                     ),
                     in: Capsule()
                 )
-                .shadow(color: AoiOnboardingTheme.accent.opacity(0.28), radius: 14, x: 0, y: 8)
+                .shadow(color: Color(red: 0.57, green: 0.39, blue: 0.88).opacity(0.28), radius: 14, x: 0, y: 8)
             }
             .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private func jumpToGroup(_ filter: MBTIFilter) {
+        if let firstType = carouselTypes.first(where: { $0.group == filter }) {
+            carouselSelection = firstType
         }
     }
 }
@@ -291,6 +237,71 @@ private struct MBTIPresentation {
     let compatibilityMessage: String
     let tint: Color
     let trainerAssetNamespace: String?
+}
+
+private struct MBTICarouselCard: View {
+    let type: MBTIType
+
+    private let cardCornerRadius: CGFloat = 32
+    private let cardHeight = UIScreen.main.bounds.height * 0.55
+
+    var body: some View {
+        let theme = type.presentation
+
+        ZStack(alignment: .bottomLeading) {
+            MBTITrainerImageView(
+                assetNamespace: theme.trainerAssetNamespace,
+                imageName: "first",
+                contentMode: .fill
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                LinearGradient(
+                    colors: [
+                        theme.tint.opacity(0.34),
+                        theme.tint.opacity(0.18),
+                        theme.tint.opacity(0.06)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+
+            LinearGradient(
+                colors: [
+                    Color.clear,
+                    Color.black.opacity(0.18),
+                    Color.black.opacity(0.78),
+                    Color.clear
+                ],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(type.rawValue)
+                    .font(.system(size: 44, weight: .heavy, design: .serif))
+                    .foregroundColor(.white)
+
+                Text(type.presentation.tagline)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .lineSpacing(4)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 26)
+        }
+        .frame(height: min(cardHeight, 520))
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.9), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
+    }
 }
 
 private struct MBTIGridCard: View {
