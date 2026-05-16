@@ -502,6 +502,7 @@ private struct TrainerCandidate: Identifiable {
             AssetTrainer(name: "", gender: .female, assetNamespace: "trainer13", imageNames: ["trainer13/first", "trainer13/second"]),
             AssetTrainer(name: "", gender: .female, assetNamespace: "trainer14", imageNames: ["trainer14/first", "trainer14/second"]),
             AssetTrainer(name: "", gender: .female, assetNamespace: "trainer15", imageNames: ["trainer15/first", "trainer15/second"]),
+            AssetTrainer(name: "", gender: .female, assetNamespace: "trainer16", imageNames: ["trainer16/first", "trainer16/second"]),
             AssetTrainer(name: "", gender: .female, assetNamespace: nil, imageNames: ["trainer3_first", "trainer3_second"])
         ]
 
