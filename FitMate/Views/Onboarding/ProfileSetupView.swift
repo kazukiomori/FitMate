@@ -8,6 +8,11 @@ import SwiftUI
 struct ProfileSetupView: View {
     @EnvironmentObject var user: User
     @State private var animateCard = false
+
+    private var preferredNameSummary: String {
+        let trimmedName = user.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.isEmpty ? "未設定" : trimmedName
+    }
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -140,32 +145,32 @@ struct ProfileSetupView: View {
                     }
 
                     ModernSettingCard(
-                        icon: "person.text.rectangle",
-                        title: "MBTI",
-                        value: user.mbti.rawValue
+                        icon: "textformat.characters",
+                        title: "呼ばれたい名前",
+                        value: preferredNameSummary
                     ) {
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("わかる範囲で大丈夫です")
+                            Text("トレーナーに呼ばれたい名前を入力してください")
                                 .font(.caption)
                                 .foregroundColor(AoiOnboardingTheme.textSecondary)
 
-                            FlexibleTagLayout(spacing: 10, runSpacing: 10) {
-                                SelectableChip(
-                                    title: MBTIType.undecided.rawValue,
-                                    isSelected: user.mbti == .undecided
-                                ) {
-                                    user.mbti = .undecided
-                                }
+                            TextField("例: かずき", text: $user.name)
+                                .textInputAutocapitalization(.never)
+                                .disableAutocorrection(true)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(Color.white)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(AoiOnboardingTheme.border, lineWidth: 1)
+                                        )
+                                )
 
-                                ForEach(MBTIType.selectableCases, id: \.self) { type in
-                                    SelectableChip(
-                                        title: type.rawValue,
-                                        isSelected: user.mbti == type
-                                    ) {
-                                        user.mbti = type
-                                    }
-                                }
-                            }
+                            Text("未入力でもあとからプロフィールで変更できます")
+                                .font(.caption2)
+                                .foregroundColor(AoiOnboardingTheme.textSecondary)
                         }
                     }
                 }
