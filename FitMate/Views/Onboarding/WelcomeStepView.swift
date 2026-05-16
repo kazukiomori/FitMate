@@ -90,26 +90,31 @@ struct MBTISelectionStepView: View {
 
     private var heroSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 36) {
+            HStack(spacing: 20) {
                 ForEach(carouselTypes, id: \.self) { type in
                     MBTICarouselCard(type: type)
-                        .frame(width: UIScreen.main.bounds.width * 0.74)
+                        .frame(width: UIScreen.main.bounds.width * 0.76)
                         .id(type)
+                        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                            content
+                                .scaleEffect(phase.isIdentity ? 1.0 : 0.90)
+                                .offset(y: phase.isIdentity ? 0 : 0)
+                        }
                 }
             }
-            .padding(.horizontal, 36)
+            .padding(.horizontal, UIScreen.main.bounds.width * 0.12)
             .scrollTargetLayout()
         }
         .scrollTargetBehavior(.viewAligned)
         .scrollPosition(id: $carouselSelection)
         .frame(height: 560)
     }
-
+    
     private var filterTabsSection: some View {
         HStack(spacing: 0) {
             ForEach(displayFilters, id: \.self) { filter in
                 let isActive = selectedFilter == filter
-
+                
                 Button {
                     withAnimation(.easeInOut(duration: 0.22)) {
                         selectedFilter = filter
@@ -244,6 +249,10 @@ private struct MBTICarouselCard: View {
 
     private let cardCornerRadius: CGFloat = 32
     private let cardHeight = UIScreen.main.bounds.height * 0.55
+    
+    private var cardWidth: CGFloat {
+        UIScreen.main.bounds.width * 0.76
+    }
 
     var body: some View {
         let theme = type.presentation
@@ -254,7 +263,7 @@ private struct MBTICarouselCard: View {
                 imageName: "first",
                 contentMode: .fill
             )
-            .frame(width: UIScreen.main.bounds.width * 0.74, height: min(cardHeight, 520))
+            .frame(width: cardWidth, height: min(cardHeight, 520))
             .clipped()
 
             LinearGradient(
@@ -279,14 +288,14 @@ private struct MBTICarouselCard: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 26)
         }
-        .frame(width: UIScreen.main.bounds.width * 0.74, height: min(cardHeight, 520))
+        .frame(width: cardWidth, height: min(cardHeight, 520))
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                 .stroke(Color.white.opacity(0.9), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
