@@ -163,7 +163,7 @@ struct MBTISelectionStepView: View {
 
     private var bottomActionSection: some View {
         HStack(spacing: 14) {
-            Button(action: onContinue) {
+            Button(action: continueWithSelectedType) {
                 HStack(spacing: 8) {
                     Text(user.mbti == .undecided ? "未選択で次へ" : "このタイプで次へ")
                         .font(.headline.weight(.bold))
@@ -195,6 +195,38 @@ struct MBTISelectionStepView: View {
         if let firstType = carouselTypes.first(where: { $0.group == filter }) {
             carouselSelection = firstType
         }
+    }
+
+    private func continueWithSelectedType() {
+        let type = selectedType
+        user.mbti = type
+
+        if let trainer = makeTrainer(for: type) {
+            user.setPersonalTrainer(trainer)
+        }
+
+        onContinue()
+    }
+
+    private func makeTrainer(for type: MBTIType) -> PersonalTrainer? {
+        guard let assetNamespace = type.presentation.trainerAssetNamespace else {
+            return nil
+        }
+
+        let images = ["first", "second"]
+            .compactMap { imageName in
+                UIImage(named: "\(assetNamespace)/\(imageName)")
+                    ?? UIImage(named: "\(assetNamespace)_\(imageName)")
+            }
+
+        let trainerName = TrainerProfileCatalog.profile(for: assetNamespace)?.name.full ?? ""
+
+        return PersonalTrainer(
+            name: trainerName,
+            preferences: type.defaultTrainerPreferences,
+            images: images,
+            assetNamespace: assetNamespace
+        )
     }
 }
 
@@ -388,6 +420,51 @@ private struct MBTITrainerImageView: View {
 }
 
 private extension MBTIType {
+    var defaultTrainerPreferences: TrainerPreferences {
+        switch self {
+        case .intj, .intp, .entj, .entp:
+            return TrainerPreferences(
+                gender: .female,
+                age: .young,
+                style: .professional,
+                personality: .logical,
+                specialization: .weightLoss
+            )
+        case .infj, .infp, .enfj, .enfp:
+            return TrainerPreferences(
+                gender: .female,
+                age: .young,
+                style: .friendly,
+                personality: .encouraging,
+                specialization: .healthyLifestyle
+            )
+        case .istj, .isfj, .estj, .esfj:
+            return TrainerPreferences(
+                gender: .female,
+                age: .young,
+                style: .professional,
+                personality: .supportive,
+                specialization: .nutritionFocus
+            )
+        case .istp, .isfp, .estp, .esfp:
+            return TrainerPreferences(
+                gender: .female,
+                age: .young,
+                style: .energetic,
+                personality: .motivational,
+                specialization: .muscleBuilding
+            )
+        case .undecided:
+            return TrainerPreferences(
+                gender: .female,
+                age: .young,
+                style: .friendly,
+                personality: .supportive,
+                specialization: .healthyLifestyle
+            )
+        }
+    }
+
     var groupTint: Color {
         group.tint
     }
