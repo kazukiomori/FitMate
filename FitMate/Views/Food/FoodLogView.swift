@@ -166,7 +166,7 @@ struct FoodLogView: View {
                     .ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
+                    VStack(spacing: 16) {
                         headerSection
                         trainerGoalCard
                         metricsSection
@@ -177,7 +177,7 @@ struct FoodLogView: View {
                         recentHistorySection
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.top, 10)
                     .padding(.bottom, 120)
                 }
             }
@@ -246,7 +246,7 @@ struct FoodLogView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.top, 6)
+        .padding(.top, 2)
     }
 
     private var trainerGoalCard: some View {
@@ -293,20 +293,22 @@ struct FoodLogView: View {
             
             Spacer(minLength: 0)
         }
-        .padding(20)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 17)
         .background(FoodDashboardCardBackground())
     }
 
     private var metricsSection: some View {
-        HStack(alignment: .top, spacing: 14) {
+        VStack(spacing: 12) {
             calorieCard
             weightCard
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var calorieCard: some View {
         FoodMetricCard {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text("今日の摂取カロリー")
                         .font(.system(size: 16, weight: .bold))
@@ -320,24 +322,24 @@ struct FoodLogView: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("\(totalCalories)")
-                        .font(.system(size: 40, weight: .heavy, design: .rounded))
+                        .font(.system(size: 36, weight: .heavy, design: .rounded))
                         .foregroundColor(Color(red: 1.0, green: 0.21, blue: 0.29))
 
                     Text("/ \(targetCalories) kcal")
-                        .font(.system(size: 19, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.secondary)
                 }
 
                 HStack(spacing: 6) {
                     Text(calorieDifferenceBadgeText)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundColor(calorieDifference <= 0 ? Color(red: 0.14, green: 0.62, blue: 0.34) : Color(red: 1.0, green: 0.21, blue: 0.29))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
                         .background((calorieDifference <= 0 ? Color.green : Color.red).opacity(0.10), in: Capsule())
                 }
 
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     GeometryReader { geometry in
                         ZStack(alignment: .leading) {
                             Capsule()
@@ -375,11 +377,11 @@ struct FoodLogView: View {
                         .foregroundColor(calorieDifference <= 0 ? .green : .red)
 
                     Text(calorieMessage)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(calorieDifference <= 0 ? .green : .red)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 10)
                 .background((calorieDifference <= 0 ? Color.green : Color.red).opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
@@ -387,7 +389,7 @@ struct FoodLogView: View {
 
     private var weightCard: some View {
         FoodMetricCard {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text("今日の体重")
                         .font(.system(size: 16, weight: .bold))
@@ -401,29 +403,29 @@ struct FoodLogView: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(currentWeightText)
-                        .font(.system(size: 40, weight: .heavy, design: .rounded))
+                        .font(.system(size: 36, weight: .heavy, design: .rounded))
                         .foregroundColor(Color(red: 0.10, green: 0.49, blue: 0.97))
 
                     Text("kg")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.secondary)
                 }
 
                 HStack(spacing: 6) {
                     Text(weightDifferenceBadgeText)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundColor(Color(red: 0.10, green: 0.49, blue: 0.97))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
                         .background(Color.blue.opacity(0.10), in: Capsule())
                 }
 
                 Text("目標体重 \(String(format: "%.1f", user.targetWeight)) kg")
-                    .font(.subheadline)
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.secondary)
 
                 WeightSparkline(entries: weightTrendEntries)
-                    .frame(height: 58)
+                    .frame(height: 52)
             }
         }
     }
@@ -451,12 +453,14 @@ struct FoodLogView: View {
                 }
             }
         }
-        .padding(20)
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+        .padding(.bottom, 16)
         .background(FoodDashboardCardBackground())
     }
 
     private var missionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Text("今日のミッション")
                     .font(.system(size: 18, weight: .bold))
@@ -494,7 +498,7 @@ struct FoodLogView: View {
                 trailing: isWeightMissionComplete ? "記録済み" : "未記録"
             )
         }
-        .padding(20)
+        .padding(18)
         .background(FoodDashboardCardBackground())
     }
 
@@ -612,9 +616,9 @@ private struct FoodMetricCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             content
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 250, alignment: .top)
+        .frame(minHeight: 224, alignment: .top)
         .background(FoodDashboardCardBackground())
     }
 }
@@ -701,7 +705,7 @@ private struct MissionRow: View {
     let trailing: String
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundColor(isCompleted ? Color.green : Color.secondary.opacity(0.8))
@@ -728,7 +732,7 @@ private struct DashboardActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Image(systemName: icon)
                         .font(.system(size: 22, weight: .bold))
@@ -755,9 +759,9 @@ private struct DashboardActionButton: View {
                         .lineLimit(2)
                 }
             }
-            .padding(18)
+            .padding(16)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 144, alignment: .topLeading)
+            .frame(minHeight: 136, alignment: .topLeading)
             .background(FoodDashboardCardBackground())
         }
         .buttonStyle(.plain)
@@ -807,7 +811,7 @@ private struct EmptyStateCard: View {
             .font(.subheadline.weight(.semibold))
             .foregroundColor(.secondary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 22)
+            .padding(.vertical, 18)
             .background(Color(red: 0.98, green: 0.98, blue: 0.99), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
