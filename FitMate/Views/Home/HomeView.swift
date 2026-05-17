@@ -482,19 +482,13 @@ private struct TrainerConversationSection: View {
                 )
             }
             .buttonStyle(.plain)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(trainerDisplayName)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
-                Text(isFirstOpenToday ? "今日のあいさつ" : "トレーナーチャット")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
+            
+            Text(trainerDisplayName)
+                .font(.headline)
+                .foregroundColor(.primary)
+            
             Spacer(minLength: 12)
-
+            
             TrainerIntimacyMeter(
                 level: intimacyLevel,
                 title: intimacyTitle,
@@ -843,6 +837,8 @@ private struct TrainerIntimacyMeter: View {
     let progress: Double
     let gainAmount: Int
     let gainTrigger: Int
+    private let meterWidth: CGFloat = 136
+    private let labelWidth: CGFloat = 104
     @State private var isPulsing = false
     @State private var animatedProgress: Double = 0
     @State private var displayedLevel: Int = 1
@@ -898,18 +894,21 @@ private struct TrainerIntimacyMeter: View {
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
+                        .lineLimit(1)
 
                     Text(title)
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
+                .frame(width: labelWidth, alignment: .leading)
             }
 
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Color.black.opacity(0.08))
-                    .frame(width: 112, height: 6)
+                    .frame(width: meterWidth, height: 6)
 
                 Capsule()
                     .fill(
@@ -919,7 +918,7 @@ private struct TrainerIntimacyMeter: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: 112 * animatedProgress, height: 6)
+                    .frame(width: meterWidth * animatedProgress, height: 6)
             }
         }
         .padding(.horizontal, 12)
