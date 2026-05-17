@@ -19,8 +19,8 @@ struct MainTabView: View {
             
             FoodLogView()
                 .tabItem {
-                    Image(systemName: "fork.knife")
-                    Text("食事")
+                    Image(systemName: "square.and.pencil")
+                    Text("記録")
                 }
             
             ProgressChartView()
