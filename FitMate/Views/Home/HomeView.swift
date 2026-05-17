@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import TipKit
 
 struct HomeView: View {
     @EnvironmentObject var user: User
@@ -863,6 +864,7 @@ private struct TrainerIntimacyMeter: View {
     let progress: Double
     let gainAmount: Int
     let gainTrigger: Int
+    private let intimacyTip = IntimacyMeterTip()
     private let meterWidth: CGFloat = 136
     private let labelWidth: CGFloat = 104
     @State private var isPulsing = false
@@ -950,6 +952,7 @@ private struct TrainerIntimacyMeter: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(Color.black.opacity(0.03), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .popoverTip(intimacyTip, arrowEdge: .top)
         .onAppear {
             displayedLevel = level
             animatedProgress = progress
@@ -971,6 +974,16 @@ private struct TrainerIntimacyMeter: View {
         }
     }
 
+
+private struct IntimacyMeterTip: Tip {
+    var title: Text {
+        Text("親密度について")
+    }
+
+    var message: Text? {
+        Text("記録や会話を続けると親密度が上がります。レベルが上がると、トレーナーとの関係性や会話の雰囲気も深まります。")
+    }
+}
     private func animateGain() {
         showGainBadge = true
         gainBadgeOffset = 8
