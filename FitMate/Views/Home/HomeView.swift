@@ -710,12 +710,24 @@ private struct HomeChatMessage: Identifiable {
     let sender: Sender
     let text: String
     let expression: TrainerAvatarExpression?
+    let sentAt: Date = Date()
 }
 
 private struct HomeChatBubbleRow: View {
     let message: HomeChatMessage
     let trainerImage: UIImage?
     let onTrainerTap: () -> Void
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+
+    private var sentTimeText: String {
+        Self.timeFormatter.string(from: message.sentAt)
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -734,33 +746,47 @@ private struct HomeChatBubbleRow: View {
     }
 
     private var trainerBubble: some View {
-        Text(message.text)
-            .font(.subheadline)
-            .foregroundColor(.primary)
-            .lineSpacing(4)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
-            )
+        VStack(alignment: .leading, spacing: 4) {
+            Text(message.text)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .lineSpacing(4)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+
+            Text(sentTimeText)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.leading, 6)
+        }
     }
 
     private var userBubble: some View {
-        Text(message.text)
-            .font(.subheadline)
-            .foregroundColor(.primary)
-            .lineSpacing(4)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(red: 0.78, green: 0.96, blue: 0.45))
-            )
+        VStack(alignment: .trailing, spacing: 4) {
+            Text(message.text)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .lineSpacing(4)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color(red: 0.78, green: 0.96, blue: 0.45))
+                )
+
+            Text(sentTimeText)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.trailing, 6)
+        }
     }
 
     @ViewBuilder
